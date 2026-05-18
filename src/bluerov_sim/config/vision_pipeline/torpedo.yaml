@@ -1,0 +1,53 @@
+# BlueROV2 torpedo-task vision pipeline parameters.
+#
+# Diff vs. auv4_orin/torpedo.yaml:
+# - Topics point at BlueROV's front camera (`/bluerov/front_cam/image`).
+# - model_path uses the latest .pt available locally
+#   (`yolov11s_torpedo_20250817_0.pt`) since Stage 1 has no TRT. The AUV4
+#   config referenced a 2026 yolov26 model that is not in src/ml_models.
+# - camera_info_topic — same caveat as bin.yaml; BlueROV SDF cameras need
+#   either a Gazebo CameraInfo plugin or a static publisher.
+
+/**/torpedo_yolo_node:
+  ros__parameters:
+    model_path: /root/HOST/bluerov_ws/src/ml_models/yolov11_segment/yolov11s_torpedo_20250817_0.pt
+    conf: 0.25
+    iou: 0.7
+    agnostic_nms: true
+    input_image_topic: /bluerov/front_cam/image
+    output_detections_topic: torpedo/yolo/detections
+    output_annotations_topic: torpedo/yolo/annotations
+
+/**/torpedo_hole_yolo_node:
+  ros__parameters:
+    model_path: /root/HOST/bluerov_ws/src/ml_models/yolov11_segment/yolov11s_torpedo_20250817_0.pt
+    conf: 0.25
+    iou: 0.7
+    agnostic_nms: true
+    input_image_topic: /bluerov/front_cam/image
+    output_detections_topic: torpedo/hole/yolo/detections
+    output_annotations_topic: torpedo/hole/yolo/annotations
+    display_tracker_id: true
+    tracker_config: botsort.yaml
+
+/**/torpedo_pose_estimator_node:
+  ros__parameters:
+    camera_info_topic: /bluerov/front_cam/camera_info
+    object_frame_id: torpedo/yolo
+    input_detections_topic: torpedo/yolo/detections
+
+/**/torpedo_hole_pose_estimator_node:
+  ros__parameters:
+    camera_info_topic: /bluerov/front_cam/camera_info
+    input_detections_topic: torpedo/hole/yolo/detections
+    top_left_frame_id: torpedo/hole/top_left
+    top_right_frame_id: torpedo/hole/top_right
+    bottom_left_frame_id: torpedo/hole/bottom_left
+    bottom_right_frame_id: torpedo/hole/bottom_right
+
+/**/lifecycle_manager_node:
+  ros__parameters:
+    node_names:
+      - torpedo_yolo_node
+      - torpedo_hole_yolo_node
+    wait_timeout_sec: 1.0

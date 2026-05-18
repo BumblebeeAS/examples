@@ -20,7 +20,7 @@ from typing import Any, Callable
 import py_trees
 from geometry_msgs.msg import PoseStamped
 
-from node_registry import BlueROVSharedAction, BlueROVSharedService
+from bluerov_sim.node_registry import BlueROVSharedAction, BlueROVSharedService
 from mission_planner_2.vehicles.auv.trees.goto import goto as auv_goto
 from mission_planner_2.vehicles.shared.trees.blackboard import convert_to_safe_name
 from mission_planner_2.vehicles.shared.trees.goto import goto_base
