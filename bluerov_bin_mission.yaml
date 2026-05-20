@@ -7,8 +7,8 @@
 #
 # Pane → launch file map:
 #   sim       — bluerov_sim.launch.py        (Gazebo + ArduSub + MAVROS + ground-truth bridges)
-#   controls  — bluerov_bin_controls.launch.py (TFs + locomotion + convert_to_controls_pose + actuators)
-#   cluster   — bluerov_bin_cluster.launch.py  (cluster_tf action + service servers)
+#   controls  — bluerov_controls.launch.py (TFs + locomotion + convert_to_controls_pose + actuators; shared)
+#   cluster   — bluerov_cluster.launch.py  (cluster_tf action + service servers; shared)
 #   vision    — bluerov_bin_vision.launch.py   (YOLO + image_matching + pose estimators)
 #   bt        — bluerov_bin_bt.launch.py       (bluerov_bin_mission_tree)
 #
@@ -60,7 +60,7 @@ windows:
         shell_command:
           - source /opt/ros/humble/setup.bash
           - source install/setup.bash
-          - ros2 launch bluerov_sim bluerov_bin_controls.launch.py
+          - ros2 launch bluerov_sim bluerov_controls.launch.py
 
       # ── cluster ────────────────────────────────────────────────────────────
       # cluster_tf action + service servers under /bluerov. This pane is the
@@ -71,7 +71,7 @@ windows:
         shell_command:
           - source /opt/ros/humble/setup.bash
           - source install/setup.bash
-          - ros2 launch bluerov_sim bluerov_bin_cluster.launch.py
+          - ros2 launch bluerov_sim bluerov_cluster.launch.py
 
       # ── vision ─────────────────────────────────────────────────────────────
       # Perception stack under /bluerov/bin: YOLO (lifecycle) +

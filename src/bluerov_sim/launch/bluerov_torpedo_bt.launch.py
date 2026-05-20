@@ -1,8 +1,8 @@
 """BlueROV2 torpedo-task: behaviour tree only.
 
 Just the py_trees mission tree (bluerov_torpedo_mission_tree.py). Run after
-bluerov_sim.launch.py, bluerov_torpedo_controls.launch.py,
-bluerov_torpedo_cluster.launch.py, and bluerov_torpedo_vision.launch.py
+bluerov_sim.launch.py, bluerov_controls.launch.py,
+bluerov_cluster.launch.py, and bluerov_torpedo_vision.launch.py
 are up.
 
 Split out of the old monolithic bluerov_torpedo.launch.py so the BT pane
