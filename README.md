@@ -40,6 +40,8 @@ Gazebo Harmonic
 | **ArduPilot Gazebo Plugin** | Bridges Gazebo physics to ArduSub via JSON over UDP (`libArduPilotPlugin.so`)                       |
 | **ArduSub SITL**            | Flight controller firmware (same binary as the real BlueROV2); EKF3 fuses external nav + barometer |
 | **ros_gz_bridge**           | Forwards Gazebo topics (`/bluerov/odom`, …) to ROS 2                                                |
+| **ardusub_interface**       | Owns ArduSub SITL launch, MAVROS launch/config, and odometry adapters                               |
+| **bluerov_tasks**           | Owns mission launch files, behavior trees, task TFs, controls, actuators, and task vision configs   |
 | **ground_truth_to_mavros**  | Publishes Gazebo odom to `/mavros/odometry/out` and broadcasts `map → base_link` TF                 |
 | **MAVROS**                  | ROS 2 ↔ MAVLink bridge; exposes `/mavros/setpoint_position/local` (in) and `/mavros/local_position/pose` (out) |
 | **QGroundControl**          | Ground control station on the host — connects automatically via UDP 14550                          |
@@ -165,7 +167,7 @@ That's the whole demo. It opens one tmux window with two panes:
 | Pane         | Contents                                                                                          |
 | ------------ | ------------------------------------------------------------------------------------------------- |
 | `sim`        | `bluerov_sim.launch.py` — Gazebo (`robosub_2025_pool`) + ArduSub SITL + MAVROS + Foxglove bridge  |
-| `bt_mission` | `bluerov_square_bt.launch.py` — locomotion action server + frames service + BT square mission    |
+| `bt_mission` | `bluerov_square_bt.launch.py` from `bluerov_tasks` — locomotion action server + frames service + BT square mission |
 
 The Foxglove bridge is reachable at `ws://localhost:8765` — connect with [Foxglove Studio](https://foxglove.dev) on the host.
 

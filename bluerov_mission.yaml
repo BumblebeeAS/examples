@@ -57,4 +57,4 @@ windows:
         shell_command:
           - source /opt/ros/humble/setup.bash
           - source install/setup.bash
-          - ros2 launch bluerov_sim bluerov_square_bt.launch.py
+          - ros2 launch bluerov_tasks bluerov_square_bt.launch.py

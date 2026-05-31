@@ -6,12 +6,12 @@ behaviour tree, locomotion server, or actuators. The success criterion is
 
 All commands run **inside the container** (`./run.bash bluerov_ws:humble`).
 
-## 0. One-time: rebuild bluerov_sim so the two new launch files install
+## 0. One-time: rebuild task launch packages
 
 ```bash
 cd /root/HOST/bluerov_ws
 source /opt/ros/humble/setup.bash
-colcon build --packages-select bluerov_sim --symlink-install
+colcon build --packages-select bluerov_sim bluerov_tasks --symlink-install
 source install/setup.bash
 ```
 
@@ -38,7 +38,7 @@ problem — fix that first, the rest of the test is downstream.
 ## 3a. Pane C — bin vision pipeline
 
 ```bash
-ros2 launch bluerov_sim bluerov_bin_vision.launch.py
+ros2 launch bluerov_tasks bluerov_bin_vision.launch.py
 ```
 
 Expected log lines:
@@ -86,39 +86,39 @@ In QGroundControl (host):
 
 Then in Pane D:
 
-```bash
-ros2 topic echo /bluerov/bin/bin/yolo/detections --once
-```
+    ```bash
+    ros2 topic echo /bluerov/bin/bin/yolo/detections --once
+    ```
 
 Expect at least one `Detection` entry with a class label matching the bin
 classes the model was trained on.
 
 ## 6. Torpedo pipeline — same flow, front camera
 
-```bash
-# Pane C
-ros2 launch bluerov_sim bluerov_torpedo_vision.launch.py
+    ```bash
+    # Pane C
+    ros2 launch bluerov_tasks bluerov_torpedo_vision.launch.py
 
-# Pane D
-ros2 service call /bluerov/torpedo/manage_nodes \
-    lifecycle_msgs/srv/ChangeState "{transition: {id: 1}}"
-ros2 service call /bluerov/torpedo/manage_nodes \
-    lifecycle_msgs/srv/ChangeState "{transition: {id: 3}}"
+    # Pane D
+    ros2 service call /bluerov/torpedo/manage_nodes \
+        lifecycle_msgs/srv/ChangeState "{transition: {id: 1}}"
+    ros2 service call /bluerov/torpedo/manage_nodes \
+        lifecycle_msgs/srv/ChangeState "{transition: {id: 3}}"
 
-# Verify
-ros2 topic hz /bluerov/torpedo/torpedo/yolo/detections
-ros2 topic hz /bluerov/torpedo/torpedo/hole/yolo/detections
-```
+    # Verify
+    ros2 topic hz /bluerov/torpedo/torpedo/yolo/detections
+    ros2 topic hz /bluerov/torpedo/torpedo/hole/yolo/detections
+    ```
 
 Fly the vehicle to roughly `(1, 0, -2)` facing +x — the front camera then
 points at `torpedo_panel_v2` at `(3, 0, -2)`.
 
 ## Failure-mode triage
 
-| Symptom | Likely cause |
-| --- | --- |
-| `ros2 topic hz /bluerov/bottom_cam/image` returns nothing | gz_bridge not running, or the camera plugin isn't loaded in the SDF for `robosub_2025_pool.world` |
-| `manage_nodes` returns `success: false` on configure | YOLO node never came up — check the Pane C log |
-| Model-load ERROR on activate | `.pt` path wrong, or CUDA/torch couldn't import — `python3 -c "import torch; torch.cuda.is_available()"` |
-| `/bluerov/bin/bin/yolo/detections` stays at 0 Hz | YOLO subscribed to wrong image topic — verify `input_image_topic` in `bin.yaml` matches the bridge output |
-| Detections topic publishes empty arrays only | Camera not looking at target, or model trained on visually different footage (expected risk — see plan §Risks #6) |
+| Symptom                                                   | Likely cause                                                                                                      |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `ros2 topic hz /bluerov/bottom_cam/image` returns nothing | gz_bridge not running, or the camera plugin isn't loaded in the SDF for `robosub_2025_pool.world`                 |
+| `manage_nodes` returns `success: false` on configure      | YOLO node never came up — check the Pane C log                                                                    |
+| Model-load ERROR on activate                              | `.pt` path wrong, or CUDA/torch couldn't import — `python3 -c "import torch; torch.cuda.is_available()"`          |
+| `/bluerov/bin/bin/yolo/detections` stays at 0 Hz          | YOLO subscribed to wrong image topic — verify `input_image_topic` in `bin.yaml` matches the bridge output         |
+| Detections topic publishes empty arrays only              | Camera not looking at target, or model trained on visually different footage (expected risk — see plan §Risks #6) |

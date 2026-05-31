@@ -17,7 +17,7 @@ ros2 launch bluerov_sim bluerov_sim.launch.py \
 
 # Terminal 2 — behaviour-tree square mission
 source install/setup.bash
-ros2 launch bluerov_sim bluerov_square_bt.launch.py
+ros2 launch bluerov_tasks bluerov_square_bt.launch.py
 ```
 
 ## Waypoint mission without behaviour trees
@@ -25,20 +25,22 @@ ros2 launch bluerov_sim bluerov_square_bt.launch.py
 State-machine mission flying a 5 m × 5 m square at –2 m depth instead of the behaviour-tree square:
 
 ```bash
-ros2 launch bluerov_sim bluerov_mission.launch.py use_dvl:=false
+ros2 launch bluerov_tasks bluerov_mission.launch.py
 ```
 
 `(0,0,-2)` → `(5,0,-2)` → `(5,5,-2)` → `(0,5,-2)` → `(0,0,-2)`
 
 ## DVL-based odometry
 
-The default is ground truth via `ground_truth_to_mavros.py`. To swap in the Nortek DVL500-300 twist (with GT pose), use the `use_dvl` flag on `bluerov_mission.launch.py`:
+The default is ground truth via `ground_truth_to_mavros.py`. To swap in the Nortek DVL500-300 twist (with GT pose), set `odom_source:=dvl` on `bluerov_sim.launch.py`:
 
 ```bash
-ros2 launch bluerov_sim bluerov_mission.launch.py use_dvl:=true
+ros2 launch bluerov_sim bluerov_sim.launch.py \
+  world_name:=robosub_2025_pool \
+  ardusub:=true mavros:=true odom_source:=dvl
 ```
 
-`dvl_to_mavros.py` fuses ground truth pose with DVL twist into `/mavros/odometry/out`.
+The adapter nodes live in `ardusub_interface`. `dvl_to_mavros.py` fuses ground truth pose with DVL twist into `/mavros/odometry/out`.
 
 ## Headless / CI mode
 
@@ -60,7 +62,7 @@ Pass the world filename (without extension) as `world_name`. World files are res
 | `dave_ocean_waves`      | `bb_worlds`   | Open ocean with wave simulation |
 | `robotx_2026_sg_river`  | `bb_worlds`   | RobotX 2026 Singapore river     |
 
-`bluerov_sim.launch.py` parses `spherical_coordinates` from the world SDF to set ArduSub's home location. If the world is not on `GZ_SIM_RESOURCE_PATH`, it falls back to a default lat/lon (33.810313, -118.393867).
+`ardusub_interface.launch.py`, included by `bluerov_sim.launch.py`, parses `spherical_coordinates` from the world SDF to set ArduSub's home location. If the world is not on `GZ_SIM_RESOURCE_PATH`, it falls back to a default lat/lon (33.810313, -118.393867).
 
 ## Custom robot model
 
@@ -104,6 +106,7 @@ Port: 14550
 | `world_name`             | `empty.sdf`                           | Gazebo world file (resolved via `GZ_SIM_RESOURCE_PATH`)              |
 | `ardusub`                | `true`                                | Launch ArduSub SITL                                                  |
 | `mavros`                 | `true`                                | Launch MAVROS node                                                   |
+| `odom_source`            | `ground_truth`                        | MAVROS odometry adapter: `ground_truth`, `dvl`, or `none`            |
 | `gui`                    | `true`                                | Show Gazebo GUI                                                      |
 | `headless`               | `false`                               | Headless (server-only) mode                                          |
 | `paused`                 | `false`                               | Start simulation paused                                              |
@@ -116,13 +119,18 @@ Port: 14550
 | `urdf_path`              | `<package>/urdf/bluerov2.urdf`        | URDF for robot_state_publisher and Foxglove visualisation            |
 | `model_sdf_path`         | `<package>/models/bluerov2/model.sdf` | SDF model for Gazebo spawning (physics, collisions, sensors)         |
 
-`bluerov_sim.launch.py` also unconditionally starts **robot_state_publisher**, **joint_state_publisher**, **foxglove_bridge** (WebSocket port 8765), and **world_objects_to_markers** (publishes world SDF objects as a `MarkerArray` on `/world_objects/markers`).
+`bluerov_sim.launch.py` also unconditionally starts **robot_state_publisher**, **foxglove_bridge** (WebSocket port 8765), and **world_objects_to_markers** (publishes world SDF objects as a `MarkerArray` on `/world_objects/markers`).
 
-### `bluerov_mission.launch.py`
+### `ardusub_interface.launch.py`
 
-| Argument  | Default | Description                                                       |
-| --------- | ------- | ----------------------------------------------------------------- |
-| `use_dvl` | `false` | Use `dvl_to_mavros.py`; `false` uses `ground_truth_to_mavros.py`  |
+| Argument      | Default                 | Description                                                |
+| ------------- | ----------------------- | ---------------------------------------------------------- |
+| `ardusub`     | `true`                  | Launch ArduSub SITL                                        |
+| `mavros`      | `true`                  | Launch MAVROS                                              |
+| `world_name`  | `empty.sdf`             | World name used to derive ArduSub home coordinates         |
+| `home`        |                         | Optional ArduSub home override: `lat,lon,alt,yaw`          |
+| `odom_source` | `ground_truth`          | MAVROS odometry adapter: `ground_truth`, `dvl`, or `none`  |
+| `dvl_topic`   | `/bluerov/dvl/velocity` | DVL topic used when `odom_source:=dvl`                     |
 
 ### `bluerov_square_bt.launch.py`
 
