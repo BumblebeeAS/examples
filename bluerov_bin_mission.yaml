@@ -33,7 +33,6 @@ windows:
       #   • MAVROS — ROS 2 ↔ MAVLink bridge (publishes /mavros/local_position/pose,
       #     accepts setpoints on /mavros/setpoint_position/local, broadcasts
       #     MAVLink telemetry on UDP 14550 for QGroundControl on the host)
-      #   • foxglove_bridge on ws://localhost:8765
       #   • ground_truth_to_mavros — feeds Gazebo odom into /mavros/odometry/out
       #     and broadcasts the map→base_link TF
       #   • world_objects_to_markers — publishes world SDF objects as MarkerArray

@@ -42,7 +42,6 @@ windows:
       #     bb_worlds/worlds/robosub_2025_pool.world)
       #   • ArduSub SITL (same firmware that runs on the real BlueROV2)
       #   • MAVROS — ROS 2 ↔ MAVLink bridge
-      #   • foxglove_bridge on ws://localhost:8765
       #   • ground_truth_to_mavros — feeds Gazebo odom into /mavros/odometry/out
       #     and broadcasts the map→base_link TF
       #   • world_objects_to_markers — publishes world SDF objects as MarkerArray
