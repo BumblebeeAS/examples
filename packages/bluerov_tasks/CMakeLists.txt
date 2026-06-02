@@ -4,8 +4,12 @@ project(bluerov_tasks)
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 
-install(DIRECTORY launch config
+install(DIRECTORY launch config worlds
   DESTINATION share/${PROJECT_NAME})
+
+# Add the worlds dir to GZ_SIM_RESOURCE_PATH so `world_name:=robosub2025`
+# resolves robosub2025.world; its <include> URIs pull the models from Fuel.
+ament_environment_hooks("hooks/bluerov_tasks_worlds.dsv.in")
 
 ament_python_install_package(${PROJECT_NAME})
 
