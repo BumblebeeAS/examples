@@ -35,10 +35,24 @@ Inside the container:
 ```bash
 cd /root/HOST/isaac_ros-dev
 source /opt/ros/humble/setup.bash
-vcs import src < src/examples/bluerov_ws.repos
+vcs import --recursive src < src/examples/bluerov_ws.repos
 colcon build --symlink-install
 source install/setup.bash
 ```
+
+`--recursive` is required: `image_matching` vendors the XFeat model code as a
+git submodule (`accelerated_features`). Without it, `simple_matcher_node` dies
+with `ModuleNotFoundError: feature_matcher.models.accelerated_features.modules`.
+If you already imported without it, recover with:
+
+```bash
+cd src/image_matching && git submodule update --init --recursive
+```
+
+`bluerov_ws.repos` pins `foxglove-sdk` to 3.2.5 (`9323b15a`), which builds
+clean with `--symlink-install`. Don't bump it to 3.4.x / `main` — those install
+the bridge via `install(FILES $<TARGET_FILE:...>)`, which `--symlink-install`
+cannot resolve.
 
 Make sure the sibling `src/ardusub_sim` repo is present before building.
 

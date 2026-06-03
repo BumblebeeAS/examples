@@ -1,3 +1,11 @@
+# bluerov_ws.repos
+# Usage: vcs import --recursive src < bluerov_ws.repos
+#
+# `--recursive` is required because `image_matching` vendors the XFeat model
+# code as a git submodule (BumblebeeAS/accelerated_features). Without it,
+# `simple_matcher_node` dies on import with
+# `ModuleNotFoundError: feature_matcher.models.accelerated_features.modules`.
+
 repositories:
 
   # ── Core: ArduPilot Gazebo Plugin ──────────────────────────────────────────
@@ -21,10 +29,27 @@ repositories:
     version: 8d62b38e451e07c2efaf94a2c415129af3bf207b
     depth: 1
 
-  mission_planner_2:
+  # Pinned to 3.2.5 (9323b15a): this release statically links the SDK and
+  # installs the bridge via install(TARGETS ...), so it builds clean with
+  # colcon --symlink-install. Newer tags (3.4.x) switched to a shared-lib +
+  # remote-access gateway that installs via install(FILES $<TARGET_FILE:...>),
+  # which ament's --symlink-install cannot expand. Do NOT track `main`.
+  # Manual clone (not on the apt index): ros-humble-foxglove-bridge was
+  # removed from the Humble package index on 2026-03-20.
+  foxglove-sdk:
     type: git
-    url: https://github.com/BumblebeeAS/mission_planner_2.git
-    version: 49f6614de8f6b4795f85e54a39acccde5638de6b
+    url: https://github.com/foxglove/foxglove-sdk
+    version: 9323b15a
+    depth: 1
+
+
+  # Public release slice of the mission-planning framework (extracted from the
+  # private mission_planner_2 repo). Provides the generic behaviour-tree
+  # infrastructure that bluerov_tasks builds on. Pin `version` once published.
+  mission_planner_release:
+    type: git
+    url: https://github.com/BumblebeeAS/mission_planner_release.git
+    version: main
     depth: 1
 
   bb_worlds:
@@ -52,6 +77,9 @@ repositories:
     version: b3108e8400f5bb8e7ff625e023ed444fbbbff2fa
     depth: 1
 
+  # NOTE: image_matching has a submodule (accelerated_features / XFeat).
+  # Use `vcs import --recursive`, or after a non-recursive import run:
+  #   cd src/image_matching && git submodule update --init --recursive
   image_matching:
     type: git
     url: https://github.com/BumblebeeAS/image_matching.git
