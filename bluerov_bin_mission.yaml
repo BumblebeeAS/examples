@@ -41,7 +41,7 @@ windows:
           - source /opt/ros/humble/setup.bash
           - source install/setup.bash
           - ros2 launch bluerov_sim bluerov_sim.launch.py
-            world_name:=robosub_2025_pool
+            world_name:=robosub_2025
             ardusub:=true
             mavros:=true
             gui:=true
@@ -92,3 +92,14 @@ windows:
           - source /opt/ros/humble/setup.bash
           - source install/setup.bash
           - ros2 launch bluerov_tasks bluerov_bin_bt.launch.py
+
+      # ── foxglove ───────────────────────────────────────────────────────────
+      # Foxglove WebSocket bridge — exposes all ROS topics/services/params to a
+      # Foxglove Studio client (default ws://localhost:8765). use_sim_time:=true
+      # so message timestamps align with Gazebo/ArduSub sim time.
+      - pane_name: foxglove
+        shell_command:
+          - source /opt/ros/humble/setup.bash
+          - source install/setup.bash
+          - ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+            use_sim_time:=true
