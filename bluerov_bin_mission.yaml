@@ -61,6 +61,20 @@ windows:
           - source install/setup.bash
           - ros2 launch bluerov_tasks bluerov_controls.launch.py
 
+      # ── choice ─────────────────────────────────────────────────────────────
+      # Fish/shark selector. The bin BT queries /bluerov/choice/get_is_fish at
+      # startup (defaulting to fish if this server isn't running) to pick which
+      # bin to drop into. Change the target live from any sourced shell using
+      # the set_is_fish command printed in this pane.
+      - pane_name: choice
+        shell_command:
+          - source /opt/ros/humble/setup.bash
+          - source install/setup.bash
+          - 'echo "Fish/shark choice server — BT reads /bluerov/choice/get_is_fish at startup (default fish)."'
+          - 'echo "  pick FISH : ros2 service call /bluerov/choice/set_is_fish std_srvs/srv/SetBool \"{data: true}\""'
+          - 'echo "  pick SHARK: ros2 service call /bluerov/choice/set_is_fish std_srvs/srv/SetBool \"{data: false}\""'
+          - ros2 run bluerov_tasks choice_server_node.py
+
       - pane_name: cluster
         shell_command:
           - source /opt/ros/humble/setup.bash

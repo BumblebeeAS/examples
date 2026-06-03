@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """BlueROV2 bin mission entry point.
 
-Builds `create_bin_root()` from `bluerov_tasks.bins.bins` (mirrored from
-mission_planner_2's AUV4 RoboSub-24 bin tree) and tick-tocks it with a
-BumbleTree.
-
 Prereqs (each in its own tmux pane — see bluerov_bin_mission.yaml):
   • bluerov_sim.launch.py            (Gazebo + ArduSub + MAVROS)
   • bluerov_controls.launch.py     (locomotion + convert_to_controls_pose + TFs + actuators; shared)
@@ -20,8 +16,8 @@ import py_trees.console as console
 import rclpy
 from bluerov_tasks.bins.bins import create_bin_root
 from bluerov_tasks.node_registry import BlueROVTreeNode
-from mission_planner_2.common.core.bumble_tree import BumbleTree
-from mission_planner_2.common.core.hooks import stop_on_success_or_failure
+from mission_planner_release.common.core.bumble_tree import BumbleTree
+from mission_planner_release.common.core.hooks import stop_on_success_or_failure
 
 TICK_PERIOD_MS = 100  # 10 Hz
 
@@ -38,8 +34,10 @@ def main(args=None) -> None:
         tree.setup(node=node, timeout=30.0)
     except Exception:
         console.logerror(
-            console.red + "Failed to set up the bin behaviour tree:\n"
-            + traceback.format_exc() + console.reset
+            console.red
+            + "Failed to set up the bin behaviour tree:\n"
+            + traceback.format_exc()
+            + console.reset
         )
         tree.shutdown()
         rclpy.try_shutdown()

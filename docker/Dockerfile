@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebsocketpp-dev \
     python3-dbg \
     python3-opencv \
+    python3-pip \
     ros-humble-actuator-msgs \
     ros-humble-ament-cmake-pycodestyle \
     ros-humble-gps-msgs \
@@ -69,6 +70,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-nav2-common \
     ros-humble-rosx-introspection \
     ros-humble-joint-state-publisher \
+    ros-humble-example-interfaces \
     ruby \
     software-properties-common \
     xterm \

@@ -6,15 +6,15 @@ from bb_perception_msgs.msg import PointCorrespondencesStamped
 from bb_perception_msgs.srv import IMPoseEstimatorToggleTemplate
 from rclpy.qos import qos_profile_sensor_data
 
-from mission_planner_2.common.core import checked_service
-from mission_planner_2.vehicles.shared.trees.blackboard import DynamicSetBlackboard
-from mission_planner_2.common.util.detection_utils import (
+from mission_planner_release.common.core import checked_service
+from mission_planner_release.vehicles.shared.trees.blackboard import (
+    DynamicSetBlackboard,
+)
+from mission_planner_release.common.util.detection_utils import (
     create_img_matching_request,
 )
-from mission_planner_2.common.util.namespace_utils import full_key_generator
+from mission_planner_release.common.util.namespace_utils import full_key_generator
 
-# Hardcoded namespace — generate_namespace() walks the caller path for
-# `/trees/` but this file isn't under one. Same workaround as bins.py.
 NAMESPACE = "/bluerov/torpedo/correspondences"
 fk = full_key_generator(NAMESPACE)
 
@@ -140,9 +140,11 @@ def create_point_correspondences_check_root(
         key=[_POINTS_1_KEY, _POINTS_2_KEY],
         update_key=correct_template_key,
         overwrite=True,
-        func=lambda first, second: template_frame_optical_1
-        if len(first.data) > len(second.data)
-        else template_frame_optical_2,
+        func=lambda first, second: (
+            template_frame_optical_1
+            if len(first.data) > len(second.data)
+            else template_frame_optical_2
+        ),
     )
 
     root.add_children(

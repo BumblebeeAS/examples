@@ -20,6 +20,7 @@ install(PROGRAMS
   scripts/bluerov_movement.py
   scripts/bluerov_square_mission_tree.py
   scripts/bluerov_torpedo_mission_tree.py
+  scripts/choice_server_node.py
   scripts/goto.py
   scripts/locomotion_action_server.py
   DESTINATION lib/${PROJECT_NAME})

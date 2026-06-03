@@ -2,7 +2,7 @@ import numpy as np
 from geometry_msgs.msg import PoseStamped
 from tf_transformations import euler_from_quaternion
 
-from mission_planner_2.common.util.pose_utils import create_stamped_pose
+from mission_planner_release.common.util.pose_utils import create_stamped_pose
 
 
 def find_acute_angle(pose: PoseStamped) -> PoseStamped:

@@ -1,19 +1,5 @@
-"""BlueROV2 torpedo mission BT — full upstream parity, BlueROV-rewired.
+"""BlueROV2 torpedo mission BT"""
 
-Mirrored from mission_planner_2.vehicles.auv.trees.robosub24.torpedo.torpedo
-with the same patches we applied for bins:
-- `/auv4/...` topics replaced with `/bluerov/...`
-- frames switched to BlueROV link names (front_cam_optical,
-  torpedo_shooter_{left,right}_link)
-- goto pulled from scripts/goto.py via sys.path so Locomotion goals land on
-  /bluerov/controls instead of /auv4/controls
-- move_and_shoot_seq and point_correspondences_check imported from this
-  package (the upstream versions hardcode auv4/base_link_ned, world_ned, and
-  AUVSharedAction.CLUSTER)
-- NAMESPACE hardcoded — generate_namespace() needs `/trees/` in the file path
-- SEARCH_DEPTH negated for map/ENU (upstream NED uses positive = below)
-- ArmAndSetMode + goto_torpedo_vicinity wrapped around the upstream tree
-"""
 import operator
 import os
 import sys
@@ -22,18 +8,18 @@ import py_trees
 from ament_index_python.packages import get_package_prefix
 from bb_perception_msgs.srv import IMPoseEstimatorToggleTemplate
 from lifecycle_msgs.srv import ChangeState
-from std_srvs.srv import Trigger
 
-from mission_planner_2.common.core import checked_service
-from mission_planner_2.common.util.detection_utils import (
+from mission_planner_release.common.core import checked_service
+from mission_planner_release.common.util.detection_utils import (
     create_end_vision_req,
     create_img_matching_request,
     create_start_vision_req,
 )
-from mission_planner_2.common.util.namespace_utils import full_key_generator
-from mission_planner_2.common.util.pose_utils import create_stamped_pose
-from mission_planner_2.vehicles.shared.trees.blackboard import MultiSetBlackboard
+from mission_planner_release.common.util.namespace_utils import full_key_generator
+from mission_planner_release.common.util.pose_utils import create_stamped_pose
+from mission_planner_release.vehicles.shared.trees.blackboard import MultiSetBlackboard
 
+from bluerov_tasks.shared_trees.choice import create_get_choice_root
 from bluerov_tasks.shared_trees.search import create_search_front_root
 from bluerov_tasks.torpedo.move_and_shoot_seq import (
     create_firing_root,
@@ -43,19 +29,16 @@ from bluerov_tasks.torpedo.point_correspondences_check import (
     create_point_correspondences_check_root,
 )
 
-# scripts/goto.py and arm_and_set_mode.py install to lib/bluerov_tasks/ via
-# ament_cmake `install(PROGRAMS …)`, not into this Python package. Same idiom
-# as bluerov_tasks/bins/bins.py and bluerov_tasks/shared_trees/search.py.
 _BLUEROV_SCRIPTS_DIR = os.path.join(
     get_package_prefix("bluerov_tasks"), "lib", "bluerov_tasks"
 )
 if _BLUEROV_SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _BLUEROV_SCRIPTS_DIR)
-import goto  # noqa: E402  (bluerov_tasks/scripts/goto.py)
-from arm_and_set_mode import ArmAndSetMode  # noqa: E402  (bluerov_tasks/scripts/arm_and_set_mode.py)
+import goto
+from arm_and_set_mode import (
+    ArmAndSetMode,
+)
 
-# Hardcoded namespace — upstream uses generate_namespace() which walks the
-# caller path for `/trees/`. Same workaround as bins.py.
 NAMESPACE = "/bluerov/torpedo"
 fk = full_key_generator(NAMESPACE)
 
@@ -86,13 +69,7 @@ REALIGN_CLUSTER_DURATION = 2
 STABILIZE_DURATION = 3
 WAIT_AFTER_FIRE_DURATION = 3.0
 NUM_RETRIES = 3
-# Map/ENU convention: negative z = below surface. Upstream AUV uses NED
-# where positive = down — flipped here. Torpedo panels sit at world z=-2
-# (RoboSub-2025 pool, bb_worlds/worlds/robosub_2025_pool.world:168,174);
-# -0.5 keeps the front camera looking down at the panels without diving so
-# aggressively that the position controller overshoots and can't settle
-# inside the 0.2m goto threshold (first-pass tuning — make this more
-# negative once we confirm the panels are framed and the controller is happy).
+
 SEARCH_DEPTH = -0.5
 
 # Coarse approach point in map/ENU before the front-yaw search fires.
@@ -443,22 +420,12 @@ def create_torpedo_root(
         ]
     )
 
-    # Hardcode the fish/shark blackboard value so move_and_shoot's lambda
-    # (which reads choice.success to pick fish_shoot_frame vs shark_shoot_frame)
-    # doesn't KeyError on `/global/choice_is_fish`. Upstream populates this via
-    # the choice_server service; we just default to fish for now. Trigger.Response
-    # matches the type the lambda expects (.success bool field).
-    set_choice_fish = py_trees.behaviours.SetBlackboardVariable(
-        name="Set choice is fish (default)",
-        variable_name="/global/choice_is_fish",
-        variable_value=Trigger.Response(success=True, message="hardcoded fish"),
-        overwrite=True,
-    )
+    # Resolve the fish/shark choice into `/global/choice_is_fish` (a
+    # Trigger.Response, read via .success by move_and_shoot's frame-selector
+    # lambda). Queries the choice server (/bluerov/choice/get_is_fish) so the
+    # operator can pick the target, falling back to fish if it isn't running.
+    get_choice = create_get_choice_root()
 
-    # Pre-set the global base_link frame name string that move_and_shoot's
-    # create_goto_cluster_from_bb_root reads via start_frame_keys=[..., "/global/base_link"].
-    # Upstream lazily populates this from some bootstrap node; the BT crashes
-    # at the first TF-checker tick otherwise. Same workaround as choice_is_fish.
     set_global_base_link = py_trees.behaviours.SetBlackboardVariable(
         name="Set /global/base_link",
         variable_name="/global/base_link",
@@ -466,10 +433,6 @@ def create_torpedo_root(
         overwrite=True,
     )
 
-    # Top-level sequence: arm + GUIDED, prime globals, then run the torpedo
-    # mission (with its own success/fallback selector). Mirrors the bin BT
-    # root in bluerov_tasks/bins/bins.py so the torpedo mission doesn't rely
-    # on the operator arming via QGroundControl first.
     root = py_trees.composites.Sequence(
         name="Torpedo mission root",
         memory=True,
@@ -477,7 +440,7 @@ def create_torpedo_root(
     root.add_children(
         [
             ArmAndSetMode(name="arm_and_set_mode"),
-            set_choice_fish,
+            get_choice,
             set_global_base_link,
             sel_always_fire_fallback,
         ]

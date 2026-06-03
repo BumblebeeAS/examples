@@ -1,14 +1,5 @@
-"""Forked from mission_planner_2.vehicles.shared.trees.search for BlueROV2.
-
-Original kept hardcoded `auv4/base_link_ned` (module constant) and
-`/auv4/cluster_tfs_srv` (service path literal) embedded in every search
-factory. Both are now keyword-arg-parameterised with BlueROV defaults
-so the bin/torpedo trees can use them as-is.
-
-The goto.* objects come from scripts/goto.py (BlueROV-routed wrappers over
-the upstream auv goto), so `anchor_frame_name=base_link_frame` is the
-BlueROV default and would no longer need an explicit override — kept for
-clarity at call sites.
+"""
+Vehicle search movement for objects of interest.
 """
 
 import os
@@ -24,11 +15,13 @@ from geometry_msgs.msg import PoseStamped
 from py_trees_ros.subscribers import operator
 from rclpy.qos import qos_profile_sensor_data
 
-from mission_planner_2.common.util.pose_utils import (
+from mission_planner_release.common.util.pose_utils import (
     create_clustering_request,
     create_stamped_pose,
 )
-from mission_planner_2.vehicles.shared.trees.blackboard import DynamicSetBlackboard
+from mission_planner_release.vehicles.shared.trees.blackboard import (
+    DynamicSetBlackboard,
+)
 
 # scripts/goto.py is installed to lib/bluerov_tasks/ by ament_cmake `install(PROGRAMS)`,
 # not inside this Python package. Reach it via the ament prefix instead of a
@@ -38,13 +31,10 @@ _BLUEROV_SCRIPTS_DIR = os.path.join(
 )
 if _BLUEROV_SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _BLUEROV_SCRIPTS_DIR)
-import goto  # noqa: E402  (bluerov_tasks/scripts/goto.py)
+import goto
 
 DEFAULT_BASE_LINK_FRAME = "base_link"
 DEFAULT_CLUSTER_SRV_NAME = "/bluerov/cluster_tfs_srv"
-# Upstream defaults out_parents="world_ned" (AUV4 NED world). Our BlueROV stack
-# uses map/ENU (see ardusub_interface/scripts/ground_truth_to_mavros.py).
-# Threaded into every create_clustering_request call below.
 DEFAULT_OUT_PARENTS_FRAME = "map"
 
 
@@ -509,9 +499,7 @@ def _gen_yaw_points(
 ) -> List[PoseStamped]:
     num_points_l = int(max_left // s)
     num_points_r = int(max_right // s)
-    points = [
-        create_stamped_pose(base_link_frame, yaw=s) for _ in range(num_points_r)
-    ]
+    points = [create_stamped_pose(base_link_frame, yaw=s) for _ in range(num_points_r)]
 
     offset = (num_points_r + 1) * s
     points.append(create_stamped_pose(base_link_frame, yaw=-offset - s))

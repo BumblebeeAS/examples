@@ -12,32 +12,33 @@ from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import UInt8
 from std_srvs.srv import Trigger
 
-from mission_planner_2.common.core import checked_service, shared_action_client
-from mission_planner_2.common.util.detection_utils import (
+from mission_planner_release.common.core import checked_service, shared_action_client
+from mission_planner_release.common.util.detection_utils import (
     create_end_vision_req,
     create_img_matching_request,
     create_start_vision_req,
 )
-from mission_planner_2.common.util.namespace_utils import full_key_generator
-from mission_planner_2.common.util.pose_utils import (
+from mission_planner_release.common.util.namespace_utils import full_key_generator
+from mission_planner_release.common.util.pose_utils import (
     create_clustering_goal,
     create_stamped_pose,
     tf_to_stamped_pose,
     within_threshold_xyz,
 )
 from bluerov_tasks.node_registry import BlueROVSharedAction
-from mission_planner_2.vehicles.auv.trees.robosub24.bins.helpers import find_acute_angle
-from mission_planner_2.vehicles.auv.trees.robosub24.bins.template_selector import (
+from bluerov_tasks.bins.helpers import find_acute_angle
+from bluerov_tasks.bins.template_selector import (
     create_template_selector_root,
 )
-from mission_planner_2.vehicles.shared.trees.blackboard import DynamicSetBlackboard
-from mission_planner_2.vehicles.shared.trees.cluster_goto import (
+from mission_planner_release.vehicles.shared.trees.blackboard import DynamicSetBlackboard
+from mission_planner_release.vehicles.shared.trees.cluster_goto import (
     create_goto_cluster_from_bb_root,
 )
+from bluerov_tasks.shared_trees.choice import create_get_choice_root
 from bluerov_tasks.shared_trees.search import (
     create_search_bot_layered_square_root,
 )
-from mission_planner_2.vehicles.shared.trees.tf_checker import (
+from mission_planner_release.vehicles.shared.trees.tf_checker import (
     create_tf_checker_from_constant_root,
 )
 
@@ -663,9 +664,16 @@ def create_bin_root():
         ]
     )
 
-    # Top-level sequence: arm + GUIDED first, then run the bin mission
-    # (with its own success/fallback selector). Mirrors the square BT root
-    # in scripts/bluerov_square_mission_tree.py so the bin mission no
+    # Resolve the fish/shark choice into `/global/choice_is_fish` (a
+    # Trigger.Response, read via .success in template_selector's choice
+    # selector). Queries the choice server (/bluerov/choice/get_is_fish) so the
+    # operator can pick which bin to drop into, falling back to fish if it isn't
+    # running. Without this the bin tree would KeyError on the choice key.
+    get_choice = create_get_choice_root()
+
+    # Top-level sequence: arm + GUIDED first, resolve the choice, then run the
+    # bin mission (with its own success/fallback selector). Mirrors the square
+    # BT root in scripts/bluerov_square_mission_tree.py so the bin mission no
     # longer relies on the operator arming via QGroundControl first.
     root = py_trees.composites.Sequence(
         name="Bin mission root",
@@ -674,6 +682,7 @@ def create_bin_root():
     root.add_children(
         [
             ArmAndSetMode(name="arm_and_set_mode"),
+            get_choice,
             sel_bin_failure_fallback,
         ]
     )

@@ -9,28 +9,26 @@ from geometry_msgs.msg import TransformStamped
 from std_srvs.srv import Trigger
 from tf_transformations import euler_from_quaternion
 
-from mission_planner_2.common.core import shared_action_client
-from mission_planner_2.common.util.namespace_utils import full_key_generator
-from mission_planner_2.common.util.pose_utils import (
+from mission_planner_release.common.core import shared_action_client
+from mission_planner_release.common.util.namespace_utils import full_key_generator
+from mission_planner_release.common.util.pose_utils import (
     create_clustering_goal,
     create_stamped_pose,
     within_threshold_rpy,
     within_threshold_xyz,
 )
 from bluerov_tasks.node_registry import BlueROVSharedAction
-from mission_planner_2.vehicles.shared.trees.blackboard import DynamicSetBlackboard
-from mission_planner_2.vehicles.shared.trees.cluster_goto import (
+from mission_planner_release.vehicles.shared.trees.blackboard import (
+    DynamicSetBlackboard,
+)
+from mission_planner_release.vehicles.shared.trees.cluster_goto import (
     create_goto_cluster_from_bb_root,
 )
-from mission_planner_2.vehicles.shared.trees.tf_checker import (
+from mission_planner_release.vehicles.shared.trees.tf_checker import (
     create_tf_checker_from_bb_root,
     create_tf_checker_from_constant_root,
 )
 
-# Pull the BlueROV-routed goto wrappers from scripts/goto.py — they live in
-# the installed `lib/bluerov_tasks/` directory (ament_cmake `install(PROGRAMS …)`),
-# not in this package, so import via the ament-resolved prefix. Same idiom as
-# bluerov_tasks/bins/bins.py and bluerov_tasks/shared_trees/search.py.
 _BLUEROV_SCRIPTS_DIR = os.path.join(
     get_package_prefix("bluerov_tasks"), "lib", "bluerov_tasks"
 )
@@ -38,9 +36,6 @@ if _BLUEROV_SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _BLUEROV_SCRIPTS_DIR)
 import goto  # noqa: E402  (bluerov_tasks/scripts/goto.py)
 
-# Upstream uses generate_namespace() which walks the caller path for `/trees/`
-# — this file isn't under any `/trees/`, so hardcode the namespace the path
-# WOULD have produced in mission_planner_2. Same workaround as bins.py.
 NAMESPACE = "/bluerov/torpedo/move_and_shoot"
 fk = full_key_generator(NAMESPACE)
 
@@ -48,8 +43,7 @@ _CLUSTERING_GOAL_KEY = fk("clustering_goal")
 _CLUSTERING_GOAL_CHECK_KEY = fk("clustering_goal_check")
 
 BASE_LINK_FRAME = "base_link"
-# Upstream defaults clustering's out_parents to "world_ned" (AUV4 NED world).
-# Our BlueROV stack uses map/ENU — see bluerov_tasks/shared_trees/search.py.
+
 OUT_PARENTS_FRAME = "map"
 
 

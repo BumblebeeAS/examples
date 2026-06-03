@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-BlueROV2 action/service registry and TreeNode for mission_planner_2 integration.
+BlueROV2 action/service registry and TreeNode for mission_planner_release integration.
 """
 import rclpy.action
 from bb_controls_msgs.action import Locomotion
 from bb_perception_msgs.action import ClusterTfAction
 from bb_planner_msgs.srv import GetPoseToControlsFrame
-from mission_planner_2.common.config.generic_registry import (
+from mission_planner_release.common.config.generic_registry import (
     ActionRegistry,
     ServiceRegistry,
     SharedAction,
     SharedService,
 )
-from mission_planner_2.common.core.tree_node import TreeNode
+from mission_planner_release.common.core.tree_node import TreeNode
 
 
 class BlueROVSharedAction(SharedAction):

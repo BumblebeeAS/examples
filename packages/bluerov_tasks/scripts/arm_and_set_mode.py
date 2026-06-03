@@ -33,10 +33,6 @@ class ArmAndSetMode(py_trees.behaviour.Behaviour):
         self._armed = False
         self._guided = False
 
-    # ------------------------------------------------------------------ #
-    # py_trees lifecycle                                                   #
-    # ------------------------------------------------------------------ #
-
     def setup(self, **kwargs) -> None:
         self.logger.debug(f"{self.qualified_name}.setup()")
         try:
@@ -110,10 +106,6 @@ class ArmAndSetMode(py_trees.behaviour.Behaviour):
         self.logger.debug(
             f"{self.qualified_name}.terminate({self.status} -> {new_status})"
         )
-
-    # ------------------------------------------------------------------ #
-    # Helpers                                                              #
-    # ------------------------------------------------------------------ #
 
     def _send_requests(self) -> None:
         """Send arm and mode requests asynchronously (mirrors bluerov_movement.py)."""
