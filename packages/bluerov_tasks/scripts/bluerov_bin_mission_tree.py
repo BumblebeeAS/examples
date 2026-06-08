@@ -4,7 +4,7 @@
 Prereqs (each in its own tmux pane — see bluerov_bin_mission.yaml):
   • bluerov_sim.launch.py            (Gazebo + ArduSub + MAVROS)
   • bluerov_controls.launch.py     (locomotion + convert_to_controls_pose + TFs + actuators; shared)
-  • bluerov_cluster.launch.py      (cluster_tf action + service servers under /bluerov; shared)
+  • bluerov_cluster.launch.py      (cluster_poses action + service servers under /bluerov; shared)
   • bluerov_bin_vision.launch.py   (YOLO + image_matching + pose estimators)
 Then bluerov_bin_bt.launch.py runs this node.
 """

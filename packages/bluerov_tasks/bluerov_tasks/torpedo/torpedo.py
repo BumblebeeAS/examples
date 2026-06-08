@@ -9,18 +9,26 @@ from ament_index_python.packages import get_package_prefix
 from bb_perception_msgs.srv import IMPoseEstimatorToggleTemplate
 from lifecycle_msgs.srv import ChangeState
 
-from mission_planner_release.common.core import checked_service
+from mission_planner_release.common.core import checked_service, shared_action_client
 from mission_planner_release.common.util.detection_utils import (
     create_end_vision_req,
     create_img_matching_request,
     create_start_vision_req,
 )
 from mission_planner_release.common.util.namespace_utils import full_key_generator
-from mission_planner_release.common.util.pose_utils import create_stamped_pose
+from mission_planner_release.common.util.pose_utils import (
+    create_pose_clustering_goal,
+    create_stamped_pose,
+    within_threshold_rpy,
+    within_threshold_xyz,
+)
 from mission_planner_release.vehicles.shared.trees.blackboard import MultiSetBlackboard
+from mission_planner_release.vehicles.shared.trees.cluster_goto import (
+    create_goto_cluster_from_constant_root,
+)
 
+from bluerov_tasks.node_registry import BlueROVSharedAction
 from bluerov_tasks.shared_trees.choice import create_get_choice_root
-from bluerov_tasks.shared_trees.search import create_search_front_root
 from bluerov_tasks.torpedo.move_and_shoot_seq import (
     create_firing_root,
     create_move_and_shoot_generator,
@@ -56,6 +64,17 @@ TORPEDO_SHOOTER_RIGHT_FRAME = "torpedo_shooter_right_link"
 TEMPLATE_FRAME_YOLO = "torpedo/yolo"
 TEMPLATE_FRAME_YOLO_CLUSTERED = "torpedo/yolo/clustered"
 
+# Torpedo-panel pose-estimator PoseStamped topic. The torpedo estimator runs
+# under the /bluerov/torpedo namespace with object_frame_id "torpedo/yolo", so
+# its PoseStamped publishes at <namespace>/<object_frame_id>/pose.
+# VERIFY via `ros2 topic list` at runtime.
+TORPEDO_POSE_TOPIC = "/bluerov/torpedo/torpedo/yolo/pose"
+ODOM_TOPIC = "/mavros/odometry/out"
+
+# Pose-clustering tuning (mirrors upstream robosub26 torpedo).
+POSE_CLUSTERING_SYNC_TOLERANCE = 0.1
+POSE_CLUSTERING_MIN_POSES = 4
+
 CENTRE_VIEW_FRAME = "torpedo/centre/view"
 
 ACTUATION_TOPIC_LEFT = "/bluerov/actuation/torpedo/left"
@@ -68,14 +87,11 @@ CLUSTER_DURATION = 4
 REALIGN_CLUSTER_DURATION = 2
 STABILIZE_DURATION = 3
 WAIT_AFTER_FIRE_DURATION = 3.0
+MATCH_SETTLE_DURATION = 4.0
 NUM_RETRIES = 3
 
 SEARCH_DEPTH = -0.5
 
-# Coarse approach point in map/ENU before the front-yaw search fires.
-# Panels straddle the origin at x=±3, y=0. We target panel v1 (the negative-x
-# one) directly: park ~1.5 m south of it and yaw to face north so the front
-# camera looks straight at the panel. The yaw-scan then refines.
 TORPEDO_VICINITY_X = -3.0
 TORPEDO_VICINITY_Y = -1.5
 # Yaw=90° in ENU map frame = facing +y (north) toward the panel.
@@ -87,14 +103,17 @@ TORPEDO_TEMPLATE_2 = "Task04_Tagging_02.png"
 TEMPLATE_FRAME_OPTICAL_1 = "Task04_Tagging_01_optical"
 TEMPLATE_FRAME_OPTICAL_2 = "Task04_Tagging_02_optical"
 
+# clustered_child_frame_id passed to the move_and_shoot cluster goal. cluster_poses
+# broadcasts the result as "<id>_<i>", so with top_k=1 the actual TF is
+# "torpedo_{1,2}_0" — which is what the shoot frames below are rooted on.
 TEMPLATE_FRAME_CLUSTERED_1 = "torpedo_1"
 TEMPLATE_FRAME_CLUSTERED_2 = "torpedo_2"
 
-FISH_SHOOT_FRAME_1 = "torpedo_1/fish/view"
-FISH_SHOOT_FRAME_2 = "torpedo_2/fish/view"
+FISH_SHOOT_FRAME_1 = "torpedo_1_0/fish/view"
+FISH_SHOOT_FRAME_2 = "torpedo_2_0/fish/view"
 
-SHARK_SHOOT_FRAME_1 = "torpedo_1/shark/view"
-SHARK_SHOOT_FRAME_2 = "torpedo_2/shark/view"
+SHARK_SHOOT_FRAME_1 = "torpedo_1_0/shark/view"
+SHARK_SHOOT_FRAME_2 = "torpedo_2_0/shark/view"
 
 SHOOT_REPEATS = 2
 MAX_ALIGN_FAILURE = 5
@@ -120,7 +139,8 @@ def create_torpedo_root(
 
     1 - arm + GUIDED + dive to search depth
     2 - move to torpedo vicinity (between the two panels)
-    3 - front-yaw search to populate torpedo/yolo/clustered
+    3 - cluster the panel pose (cluster_poses action) into
+        torpedo/yolo/clustered and goto the centre-view frame
     4 - check point correspondences for both templates
     5 - select correct template + enable detections
     6 - move and shoot first torpedo
@@ -176,7 +196,7 @@ def create_torpedo_root(
     )
 
     # Coarse approach: fly directly to panel v1's vicinity at search depth
-    # and yaw to face the panel before the front-yaw search refines. Same
+    # and yaw to face the panel before cluster-and-goto-centre refines. Same
     # pattern as the bin tree's goto_bin_vicinity, but with specified_heading
     # so the front camera is pointed roughly at the panel after the move.
     goto_torpedo_vicinity = goto.FromConstant(
@@ -192,17 +212,54 @@ def create_torpedo_root(
         depth_override_value=SEARCH_DEPTH,
     )
 
-    seq_search = create_search_front_root(
-        object_frame=TEMPLATE_FRAME_YOLO,
-        object_frame_clustered=TEMPLATE_FRAME_YOLO_CLUSTERED,
-        wait_between_moves=2.0,
-        search_depth=SEARCH_DEPTH,
+    def _make_cluster_goal(collection_duration):
+        return create_pose_clustering_goal(
+            odom_topic=ODOM_TOPIC,
+            pose_stamped_topic=TORPEDO_POSE_TOPIC,
+            clustered_child_frame_id=TEMPLATE_FRAME_YOLO_CLUSTERED,
+            collection_duration=collection_duration,
+            sync_tolerance=POSE_CLUSTERING_SYNC_TOLERANCE,
+            min_poses=POSE_CLUSTERING_MIN_POSES,
+        )
+
+    def _make_cluster_torp(label, collection_duration):
+        return py_trees.decorators.Retry(
+            name=f"Retry Cluster Torp ({label})",
+            child=shared_action_client.FromConstant(
+                name=f"Cluster torp poses ({label})",
+                shared_action=BlueROVSharedAction.CLUSTER,
+                action_goal=_make_cluster_goal(collection_duration),
+            ),
+            num_failures=NUM_RETRIES,
+        )
+
+    retry_cluster_torp = _make_cluster_torp("initial", CLUSTER_DURATION)
+    retry_cluster_torp_check = _make_cluster_torp(
+        "centre check", REALIGN_CLUSTER_DURATION
     )
 
     goto_torp_centre = goto.FromConstant(
         name="Goto torp centre",
         pose=create_stamped_pose(CENTRE_VIEW_FRAME),
         anchor_frame_name=CAMERA_FRAME,
+    )
+
+    cluster_and_goto_centre = py_trees.decorators.FailureIsSuccess(
+        name="Force succeed cluster and goto centre",
+        child=create_goto_cluster_from_constant_root(
+            cluster_node=retry_cluster_torp,
+            cluster_node_check=retry_cluster_torp_check,
+            goto_node=goto_torp_centre,
+            retries=2,
+            start_frames=[CAMERA_FRAME, BASE_LINK_FRAME],
+            goto_pose_frame=CENTRE_VIEW_FRAME,
+            stabilization_duration=2.5,
+            name="Cluster and goto centre",
+            within_threshold_list=[
+                within_threshold_xyz(DISTANCE_THRESHOLD),
+                within_threshold_rpy(YAW_THRESHOLD),
+            ],
+        ),
     )
 
     seq_check_point_correspondences = create_point_correspondences_check_root(
@@ -370,12 +427,17 @@ def create_torpedo_root(
         ],
     )
 
+    settle_before_match = py_trees.timers.Timer(
+        name="Settle before template match",
+        duration=MATCH_SETTLE_DURATION,
+    )
+
     seq_launch_torpedo.add_children(
         children=[
             retry_start_vision,
             goto_torpedo_vicinity,
-            seq_search,
-            goto_torp_centre,
+            cluster_and_goto_centre,
+            settle_before_match,
             seq_check_point_correspondences,
             sel_correct_stuff,
             retry_enable_detections,

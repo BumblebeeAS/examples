@@ -52,3 +52,5 @@
   ros__parameters:
     camera_info_topic: /bluerov/bottom_cam/camera_info
     input_points_topic: image_matching/point_correspondences
+    output_pose_topic: points/pose
+    object_frame_id: bin/points

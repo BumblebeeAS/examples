@@ -14,13 +14,13 @@ from std_srvs.srv import Trigger
 
 from mission_planner_release.common.core import checked_service, shared_action_client
 from mission_planner_release.common.util.detection_utils import (
+    create_cluster_poses_srv_request,
     create_end_vision_req,
     create_img_matching_request,
     create_start_vision_req,
 )
 from mission_planner_release.common.util.namespace_utils import full_key_generator
 from mission_planner_release.common.util.pose_utils import (
-    create_clustering_goal,
     create_stamped_pose,
     tf_to_stamped_pose,
     within_threshold_xyz,
@@ -35,8 +35,9 @@ from mission_planner_release.vehicles.shared.trees.cluster_goto import (
     create_goto_cluster_from_bb_root,
 )
 from bluerov_tasks.shared_trees.choice import create_get_choice_root
-from bluerov_tasks.shared_trees.search import (
-    create_search_bot_layered_square_root,
+from bluerov_tasks.shared_trees.cluster_decision import cluster_decision
+from mission_planner_release.vehicles.shared.trees.search import (
+    create_new_search_bot_layered_square_root,
 )
 from mission_planner_release.vehicles.shared.trees.tf_checker import (
     create_tf_checker_from_constant_root,
@@ -63,6 +64,15 @@ fk = full_key_generator(NAMESPACE)
 
 ######################### UPDATE CONSTANTS HERE #########################
 VISION_SERVER_TOPIC = "/bluerov/bin/manage_nodes"
+
+# Bin pose-estimator PoseStamped topic. The bin estimator runs under the
+# /bluerov/bin namespace with object_frame_id "bin/yolo" (confirmed via
+# `ros2 param get .../bin_pose_estimator_node object_frame_id`), so its
+# PoseStamped publishes at <namespace>/<object_frame_id>/pose.
+BIN_POSE_TOPIC = "/bluerov/bin/bin/yolo/pose"
+ODOM_TOPIC = "/mavros/odometry/out"
+CLUSTER_SERVICE_NAME = "/bluerov/cluster_poses_srv"
+SPIKE_TOPIC = "/bluerov/cluster_pose_results"
 
 TOGGLE_TEMPLATE_TOPIC = "/bluerov/bin/image_matching/toggle_template"
 TEMPLATE_NAME = "Task03_DropBRUVS.png"
@@ -112,12 +122,10 @@ SEARCH_FWD = 1.0
 SEARCH_BACK = 0.3
 SEARCH_LEFT = 0.5
 SEARCH_RIGHT = 0.5
-# NUM_SQUARES=1 triggers a special-case in shared_trees/search.py's
-# cluster_validate_seq: `operator=lambda x, y: x.cluster_spread < y or
-# num_squares == 1`. So with one layer, the cluster check auto-passes and
-# the BT advances after a single 4-waypoint sweep instead of trying
-# escalating squares. Bump this back up (3+) once detections are stable
-# enough that we want strict spread validation.
+# Number of concentric square layers the pose spike-search sweeps. With 1 layer
+# the vehicle runs a single 4-waypoint box while cluster_poses streams results;
+# the search exits as soon as decision_func (cluster_decision) sees enough
+# clustered poses. Bump up (3+) to widen the sweep if detections are sparse.
 NUM_SQUARES = 1
 OFFSET_COEFF = 1.0
 # Map/ENU convention: negative z = below surface (see scripts/bluerov_movement.py
@@ -139,6 +147,7 @@ _POINTS_1_KEY = fk("points_1")
 _POINTS_2_KEY = fk("points_2")
 _IS_ROTATED_KEY = fk("is_rotated")
 _CLUSTERING_GOAL_KEY = fk("clustering_goal")
+_SPIKE_CLUSTER_REQUEST_KEY = fk("spike_cluster_request")
 _BIN_CORRECT_DETECTIONS_REQ_KEY = fk("enable_correct_detections_req")
 _BIN_CORRECT_ENABLE_DETECTIONS_KEY = fk("bin_correct_enable_detections")
 _BIN_CENTRE_TF_KEY = fk("bin_centre_tf")
@@ -192,30 +201,43 @@ def create_bin_root():
         depth_override_value=SEARCH_DEPTH,
     )
 
-    seq_search = create_search_bot_layered_square_root(
+    # Pose-based spike search: stream ClusterPoseResultArray from the
+    # cluster_poses service (which clusters BIN_POSE_TOPIC against odom into
+    # the broadcast frame TEMPLATE_FRAME_YOLO_CLUSTERED), decide via
+    # cluster_decision, then goto the clustered pose. The full request (with
+    # cluster_interval > 0 so the service publishes periodic results) is set
+    # on the blackboard before the search root ticks.
+    set_spike_cluster_request = py_trees.behaviours.SetBlackboardVariable(
+        name="Set spike cluster request",
+        variable_name=_SPIKE_CLUSTER_REQUEST_KEY,
+        variable_value=create_cluster_poses_srv_request(
+            enabled=True,
+            odom_topic=ODOM_TOPIC,
+            pose_stamped_topic=BIN_POSE_TOPIC,
+            clustered_child_frame_id=TEMPLATE_FRAME_YOLO_CLUSTERED,
+            cluster_interval=1.0,
+            min_poses=MIN_CLUSTER_SIZE,
+            min_cluster_size=MIN_CLUSTER_SIZE,
+        ),
+        overwrite=True,
+    )
+
+    seq_search = create_new_search_bot_layered_square_root(
         fwd=SEARCH_FWD,
         back=SEARCH_BACK,
         left=SEARCH_LEFT,
         right=SEARCH_RIGHT,
         num_squares=NUM_SQUARES,
-        object_frame=TEMPLATE_FRAME_YOLO,
-        object_frame_clustered=TEMPLATE_FRAME_YOLO_CLUSTERED,
+        decision_func=cluster_decision,
+        cluster_request_key=_SPIKE_CLUSTER_REQUEST_KEY,
+        goto_n_from_constant_cls=goto.NFromConstant,
+        goto_from_blackboard_cls=goto.FromBlackboard,
+        base_link_frame=BASE_LINK_FRAME,
+        spike_topic=SPIKE_TOPIC,
+        cluster_service_name=CLUSTER_SERVICE_NAME,
         offset_coeff=OFFSET_COEFF,
         wait_between_moves=WAIT_BETWEEN_MOVES,
         search_depth=SEARCH_DEPTH,
-        cluster_dist_threshold=CLUSTER_DIST_THRESHOLD,
-        min_cluster_size=MIN_CLUSTER_SIZE,
-    )
-
-    cluster_bin_centre = shared_action_client.FromConstant(
-        name="Cluster bin centre (debug)",
-        shared_action=BlueROVSharedAction.CLUSTER,
-        action_goal=create_clustering_goal(
-            in_children=TEMPLATE_FRAME_YOLO,
-            out_children=TEMPLATE_FRAME_YOLO_CLUSTERED,
-            out_parents="map",  # upstream default is "world_ned" (AUV) — we use map
-            duration=7,
-        ),
     )
 
     extract_tf = create_tf_checker_from_constant_root(
@@ -573,8 +595,8 @@ def create_bin_root():
         children=[
             retry_start_vision,
             goto_bin_vicinity,
+            set_spike_cluster_request,
             seq_search,
-            # cluster_bin_centre,  # TODO: remove this if use search
             extract_tf,
             calculate_acute_pose,
             goto_bin_centre,

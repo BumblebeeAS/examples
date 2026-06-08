@@ -7,7 +7,7 @@ once we expose a parameter; for now it's a constant matching the panel
 orientation in `bb_worlds/worlds/robosub_2025_pool.world`.
 
 Prereqs: launch `bluerov_torpedo.launch.py` so the locomotion action server,
-convert_to_controls_pose service, cluster_tf action+service servers, static
+convert_to_controls_pose service, cluster_poses action+service servers, static
 TFs, choice_server, vision pipeline, and the actuators stub are all up.
 """
 

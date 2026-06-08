@@ -12,7 +12,7 @@ from tf_transformations import euler_from_quaternion
 from mission_planner_release.common.core import shared_action_client
 from mission_planner_release.common.util.namespace_utils import full_key_generator
 from mission_planner_release.common.util.pose_utils import (
-    create_clustering_goal,
+    create_pose_clustering_goal,
     create_stamped_pose,
     within_threshold_rpy,
     within_threshold_xyz,
@@ -45,6 +45,16 @@ _CLUSTERING_GOAL_CHECK_KEY = fk("clustering_goal_check")
 BASE_LINK_FRAME = "base_link"
 
 OUT_PARENTS_FRAME = "map"
+
+ODOM_TOPIC = "/mavros/odometry/out"
+
+TORPEDO_POINTS_POSE_TOPIC = "/bluerov/torpedo/points/pose"
+
+# Small sizing for the precise-approach cluster (few poses collected over the
+# short collection_duration while the panel is in view).
+CLUSTER_MIN_POSES = 3
+CLUSTER_MIN_CLUSTER_SIZE = 2
+CLUSTER_SYNC_TOLERANCE = 0.05
 
 
 def create_firing_root(
@@ -165,12 +175,14 @@ def create_move_and_shoot_generator(
             key=[template_frame_optical_key, template_frame_optical_clustered_key],
             update_key=_CLUSTERING_GOAL_KEY,
             overwrite=True,
-            func=lambda frame, clustered: create_clustering_goal(
-                in_children=frame,
-                out_children=clustered,
-                out_parents=OUT_PARENTS_FRAME,
-                duration=cluster_duration,
-                use_cache=False,
+            func=lambda frame, clustered: create_pose_clustering_goal(
+                odom_topic=ODOM_TOPIC,
+                pose_stamped_topic=TORPEDO_POINTS_POSE_TOPIC,
+                clustered_child_frame_id=clustered,
+                collection_duration=cluster_duration,
+                sync_tolerance=CLUSTER_SYNC_TOLERANCE,
+                min_poses=CLUSTER_MIN_POSES,
+                min_cluster_size=CLUSTER_MIN_CLUSTER_SIZE,
             ),
         )
 
@@ -179,12 +191,14 @@ def create_move_and_shoot_generator(
             key=[template_frame_optical_key, template_frame_optical_clustered_key],
             update_key=_CLUSTERING_GOAL_CHECK_KEY,
             overwrite=True,
-            func=lambda frame, clustered: create_clustering_goal(
-                in_children=frame,
-                out_children=clustered,
-                out_parents=OUT_PARENTS_FRAME,
-                duration=realign_cluster_duration,
-                use_cache=False,
+            func=lambda frame, clustered: create_pose_clustering_goal(
+                odom_topic=ODOM_TOPIC,
+                pose_stamped_topic=TORPEDO_POINTS_POSE_TOPIC,
+                clustered_child_frame_id=clustered,
+                collection_duration=realign_cluster_duration,
+                sync_tolerance=CLUSTER_SYNC_TOLERANCE,
+                min_poses=CLUSTER_MIN_POSES,
+                min_cluster_size=CLUSTER_MIN_CLUSTER_SIZE,
             ),
         )
 

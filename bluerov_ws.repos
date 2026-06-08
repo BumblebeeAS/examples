@@ -26,7 +26,7 @@ repositories:
   bb_msgs:
     type: git
     url: https://github.com/BumblebeeAS/bb_msgs.git
-    version: 8d62b38e451e07c2efaf94a2c415129af3bf207b
+    version: a115f9940cea3f216b1f5e1208e8649dbfcd80fb
     depth: 1
 
   # Pinned to 3.2.5 (9323b15a): this release statically links the SDK and
@@ -89,13 +89,13 @@ repositories:
   filters:
     type: git
     url: https://github.com/BumblebeeAS/filters.git
-    version: 84d7fc06172f0c5fde3a0536836f42479d223073
+    version: 2ff9e1e9af189725e62b3b01fbdb1c0aca581855
     depth: 1
 
   pose_estimator:
     type: git
     url: https://github.com/BumblebeeAS/pose_estimator.git
-    version: ad2e29ac06510efdd08e45d809c972f0a6e96dcf
+    version: 370eaf9bd12b6a9280751a328b98a98c0e82c493
     depth: 1
 
   vision_pipeline:

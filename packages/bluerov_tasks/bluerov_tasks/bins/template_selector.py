@@ -3,7 +3,7 @@ import operator
 import py_trees
 
 from mission_planner_release.common.util.detection_utils import create_img_matching_request
-from mission_planner_release.common.util.pose_utils import create_clustering_goal
+from mission_planner_release.common.util.pose_utils import create_pose_clustering_goal
 from bluerov_tasks.bins.choice_selector import (
     create_choice_selector_root,
 )
@@ -77,11 +77,15 @@ def create_template_selector_root(
     set_clustering_goal = py_trees.behaviours.SetBlackboardVariable(
         name="Set clustering goal",
         variable_name=clustering_goal_key,
-        variable_value=create_clustering_goal(
-            in_children=template_frame_optical,
-            out_children=template_frame_optical_clustered,
-            duration=clustering_duration,
-            use_cache=False,
+        variable_value=create_pose_clustering_goal(
+            odom_topic="/mavros/odometry/out",
+            # Bin points pose estimator publishes every matched-template pose to a
+            # single FIXED output topic. VERIFY via `ros2 topic list` at runtime.
+            pose_stamped_topic="/bluerov/bin/points/pose",
+            clustered_child_frame_id=template_frame_optical_clustered,
+            collection_duration=clustering_duration,
+            sync_tolerance=0.1,
+            min_poses=2,
         ),
         overwrite=True,
     )
@@ -118,11 +122,15 @@ def create_template_selector_root(
     set_rotated_clustering_goal = py_trees.behaviours.SetBlackboardVariable(
         name="Set clustering goal (rotated)",
         variable_name=clustering_goal_key,
-        variable_value=create_clustering_goal(
-            in_children=rotated_template_frame_optical,
-            out_children=template_frame_optical_clustered,
-            duration=clustering_duration,
-            use_cache=False,
+        variable_value=create_pose_clustering_goal(
+            odom_topic="/mavros/odometry/out",
+            # Bin points pose estimator publishes every matched-template pose to a
+            # single FIXED output topic. VERIFY via `ros2 topic list` at runtime.
+            pose_stamped_topic="/bluerov/bin/points/pose",
+            clustered_child_frame_id=template_frame_optical_clustered,
+            collection_duration=clustering_duration,
+            sync_tolerance=0.1,
+            min_poses=2,
         ),
         overwrite=True,
     )

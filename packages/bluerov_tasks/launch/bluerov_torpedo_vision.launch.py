@@ -1,23 +1,20 @@
 """BlueROV2 torpedo-task: perception pipeline under /bluerov/torpedo.
 
   - torpedo_yolo_node (lifecycle) — bin/panel YOLO detector
-  - torpedo_hole_yolo_node (lifecycle) — torpedo-hole tracker
-  - torpedo_pose_estimator_node — broadcasts the `torpedo/yolo` TF (now
-    PoseEstimatorTransformPubNode so cluster_tf can pick it up; required
-    for the BT to advance past the search leg)
-  - torpedo_hole_pose_estimator_node — RedCirclePoseEstimator, broadcasts
-    per-quadrant TFs for the holes
-  - lifecycle_manager_node — drives both YOLO lifecycle nodes through
+  - torpedo_pose_estimator_node — publishes the `torpedo/yolo` PoseStamped
+    topic (PosePubNode; cluster_poses subscribes to it; required for the BT
+    to advance past the search leg)
+  - lifecycle_manager_node — drives the YOLO lifecycle node through
     configure -> activate when the BT calls /bluerov/torpedo/manage_nodes
   - simple_matcher_node — image_matching package; exposes the
     /bluerov/torpedo/image_matching/{toggle_template,point_correspondences}
     service + topic that the BT uses to confirm which torpedo template
     (Task04_Tagging_01.png vs _02.png) is in view
   - torpedo_points_pose_estimator_node — consumes simple_matcher's
-    point_correspondences and broadcasts the Task04_Tagging_<NN>_optical
-    TF that the BT's clustering action uses as in_children. Without this
-    node the cluster_tf action server can't look up the source frame and
-    the BT stalls in the front-yaw search leg.
+    point_correspondences and publishes the Task04_Tagging_<NN>_optical
+    PoseStamped topic that the BT's cluster_poses action subscribes to.
+    Without this node the cluster_poses action server has no poses to
+    cluster and the BT stalls in the search leg.
 
 No BT, no locomotion, no actuators — split out per pane so vision can be
 restarted independently of the BT and cluster panes.
@@ -32,7 +29,6 @@ After launch (the BT does this automatically, but for manual smoke tests):
 Verify:
 
   ros2 topic hz /bluerov/torpedo/torpedo/yolo/detections
-  ros2 topic hz /bluerov/torpedo/torpedo/hole/yolo/detections
   ros2 topic list | grep image_matching
 """
 
@@ -59,23 +55,10 @@ def generate_launch_description() -> LaunchDescription:
             namespace="",
             parameters=[cfg],
         ),
-        LifecycleNode(
-            package="yolo_ros_trt",
-            executable="tracking_node",
-            name="torpedo_hole_yolo_node",
-            namespace="",
-            parameters=[cfg],
-        ),
         Node(
             package="pose_estimator",
             executable="torpedo_pose_estimator_node",
             name="torpedo_pose_estimator_node",
-            parameters=[cfg],
-        ),
-        Node(
-            package="pose_estimator",
-            executable="red_circle_pose_estimator_node",
-            name="torpedo_hole_pose_estimator_node",
             parameters=[cfg],
         ),
         Node(
@@ -98,9 +81,9 @@ def generate_launch_description() -> LaunchDescription:
             parameters=[cfg],
         ),
         # Subscribes to image_matching/point_correspondences, runs PnP, and
-        # broadcasts a TF stamped with msg.object_frame_id (set by
-        # simple_matcher to "Task04_Tagging_<NN>_optical"). cluster_tf reads
-        # that TF to build the clustered torpedo_<NN> frame.
+        # publishes a PoseStamped topic for object_frame_id (set by
+        # simple_matcher to "Task04_Tagging_<NN>_optical"). cluster_poses
+        # subscribes to that topic to build the clustered torpedo_<NN> frame.
         Node(
             package="pose_estimator",
             executable="points_pose_estimator_node",
