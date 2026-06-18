@@ -7,105 +7,63 @@
 # `ModuleNotFoundError: feature_matcher.models.accelerated_features.modules`.
 
 repositories:
-
-  # ── Core: ArduPilot Gazebo Plugin ──────────────────────────────────────────
-  # Provides libArduPilotPlugin.so — the JSON-UDP bridge between
-  # Gazebo physics and ArduSub SITL.
+  # 3rd party repositories
+  # For ardusub_sim 
   ardupilot_gazebo:
     type: git
     url: https://github.com/ArduPilot/ardupilot_gazebo.git
-    version: 50e62a55242e2a35f3fed13920faca02818a47e3
+    version: ros2
     depth: 1
-
   dave:
     type: git
     url: https://github.com/IOES-Lab/dave.git
-    version: cc98a539fff009db4b4e63314219cfdc676c12a1
+    version: ros2
     depth: 1
 
+  # BB repositories
   bb_msgs:
     type: git
     url: https://github.com/BumblebeeAS/bb_msgs.git
-    version: a115f9940cea3f216b1f5e1208e8649dbfcd80fb
-    depth: 1
-
-  # Pinned to 3.2.5 (9323b15a): this release statically links the SDK and
-  # installs the bridge via install(TARGETS ...), so it builds clean with
-  # colcon --symlink-install. Newer tags (3.4.x) switched to a shared-lib +
-  # remote-access gateway that installs via install(FILES $<TARGET_FILE:...>),
-  # which ament's --symlink-install cannot expand. Do NOT track `main`.
-  # Manual clone (not on the apt index): ros-humble-foxglove-bridge was
-  # removed from the Humble package index on 2026-03-20.
-  foxglove-sdk:
+    version: humble
+  bb_worlds:
     type: git
-    url: https://github.com/foxglove/foxglove-sdk
-    version: 9323b15a
+    url: https://github.com/BumblebeeAS/bb_worlds.git
+    version: main
     depth: 1
-
-
-  # Public release slice of the mission-planning framework (extracted from the
-  # private mission_planner_2 repo). Provides the generic behaviour-tree
-  # infrastructure that bluerov_tasks builds on. Pin `version` once published.
+  filters:
+    type: git
+    url: https://github.com/BumblebeeAS/filters.git
+    version: main
+  frames:
+    type: git
+    url: https://github.com/BumblebeeAS/frames.git
+    version: main
+  image_processing:
+    type: git
+    url: https://github.com/BumblebeeAS/image_processing.git
+    version: main
+  image_matching:
+    type: git
+    url: https://github.com/BumblebeeAS/image_matching.git
+    version: main
   mission_planner_release:
     type: git
     url: https://github.com/BumblebeeAS/mission_planner_release.git
     version: main
     depth: 1
-
-  bb_worlds:
-    type: git
-    url: https://github.com/BumblebeeAS/bb_worlds.git
-    version: c0af75400f83eba4038d52ac5bdb08872d8d54d8
-    depth: 1
-
-  frames:
-    type: git
-    url: https://github.com/BumblebeeAS/frames.git
-    version: 4d618ec2268c4405031bc34cef7ffd5c33b281ac
-    depth: 1
-
-  # ── Perception packages (RoboSub-25 bin + torpedo tasks) ──────────────────
-  yolo_ros_trt:
-    type: git
-    url: https://github.com/BumblebeeAS/yolo_ros_trt.git
-    version: c978c51f5b278c6b7f20e6b8820377fd8415a515
-    depth: 1
-
-  image_processing:
-    type: git
-    url: https://github.com/BumblebeeAS/image_processing.git
-    version: b3108e8400f5bb8e7ff625e023ed444fbbbff2fa
-    depth: 1
-
-  # NOTE: image_matching has a submodule (accelerated_features / XFeat).
-  # Use `vcs import --recursive`, or after a non-recursive import run:
-  #   cd src/image_matching && git submodule update --init --recursive
-  image_matching:
-    type: git
-    url: https://github.com/BumblebeeAS/image_matching.git
-    version: 077503bf65869346577ab53168021a20bbe2c5cb
-    depth: 1
-
-  filters:
-    type: git
-    url: https://github.com/BumblebeeAS/filters.git
-    version: 2ff9e1e9af189725e62b3b01fbdb1c0aca581855
-    depth: 1
-
-  pose_estimator:
-    type: git
-    url: https://github.com/BumblebeeAS/pose_estimator.git
-    version: 370eaf9bd12b6a9280751a328b98a98c0e82c493
-    depth: 1
-
-  vision_pipeline:
-    type: git
-    url: https://github.com/BumblebeeAS/vision_pipeline.git
-    version: 0f94261d552353d32fe2c79dc63726f85f76b260
-    depth: 1
-
   ml_models:
     type: git
     url: https://github.com/BumblebeeAS/ml_models.git
-    version: f654a28f9ffb69edddc3a3db84d2f407318c9039
-    depth: 1
+    version: robosub25
+  pose_estimator:
+    type: git
+    url: https://github.com/BumblebeeAS/pose_estimator.git
+    version: main
+  vision_pipeline:
+    type: git
+    url: https://github.com/BumblebeeAS/vision_pipeline.git
+    version: main
+  yolo_ros_trt:
+    type: git
+    url: https://github.com/BumblebeeAS/yolo_ros_trt.git
+    version: release-1.0

@@ -1,9 +1,6 @@
-# BlueROV Examples
+# Examples
 
-Quickstart demos for BlueROV mission trees and tmuxp sessions. The ArduSub
-simulation image and sim packages come from the sibling `ardusub_sim` repo.
-
-## Build Images
+## BlueROV with ArduSub
 
 Build the minimal sim image first:
 
