@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-dri \
     mesa-utils \
     ros-humble-example-interfaces \
+    ros-humble-foxglove-bridge \
     ros-humble-foxglove-msgs \
     ros-humble-joint-state-publisher \
     ros-humble-py-trees \
