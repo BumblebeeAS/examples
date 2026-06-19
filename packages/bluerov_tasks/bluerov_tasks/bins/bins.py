@@ -12,15 +12,15 @@ from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import UInt8
 from std_srvs.srv import Trigger
 
-from mission_planner_release.common.core import checked_service, shared_action_client
-from mission_planner_release.common.util.detection_utils import (
+from mission_planner_2.common.core import checked_service, shared_action_client
+from mission_planner_2.common.util.detection_utils import (
     create_cluster_poses_srv_request,
     create_end_vision_req,
     create_img_matching_request,
     create_start_vision_req,
 )
-from mission_planner_release.common.util.namespace_utils import full_key_generator
-from mission_planner_release.common.util.pose_utils import (
+from mission_planner_2.common.util.namespace_utils import full_key_generator
+from mission_planner_2.common.util.pose_utils import (
     create_stamped_pose,
     tf_to_stamped_pose,
     within_threshold_xyz,
@@ -30,16 +30,16 @@ from bluerov_tasks.bins.helpers import find_acute_angle
 from bluerov_tasks.bins.template_selector import (
     create_template_selector_root,
 )
-from mission_planner_release.vehicles.shared.trees.blackboard import DynamicSetBlackboard
-from mission_planner_release.vehicles.shared.trees.cluster_goto import (
+from mission_planner_2.vehicles.shared.trees.blackboard import DynamicSetBlackboard
+from mission_planner_2.vehicles.shared.trees.cluster_goto import (
     create_goto_cluster_from_bb_root,
 )
 from bluerov_tasks.shared_trees.choice import create_get_choice_root
 from bluerov_tasks.shared_trees.cluster_decision import cluster_decision
-from mission_planner_release.vehicles.shared.trees.search import (
+from mission_planner_2.vehicles.shared.trees.search import (
     create_new_search_bot_layered_square_root,
 )
-from mission_planner_release.vehicles.shared.trees.tf_checker import (
+from mission_planner_2.vehicles.shared.trees.tf_checker import (
     create_tf_checker_from_constant_root,
 )
 

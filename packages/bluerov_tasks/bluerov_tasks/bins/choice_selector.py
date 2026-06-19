@@ -2,7 +2,7 @@ import operator
 
 import py_trees
 
-from mission_planner_release.common.util.pose_utils import create_stamped_pose
+from mission_planner_2.common.util.pose_utils import create_stamped_pose
 
 
 def create_choice_selector_root(

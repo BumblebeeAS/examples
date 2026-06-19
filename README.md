@@ -93,8 +93,6 @@ Inside the container:
 
 ```bash
 cd /root/HOST/bluerov_ws
-source /opt/ros/humble/setup.bash
-source install/setup.bash
 tmuxp load src/examples/bluerov_mission.yaml
 ```
 

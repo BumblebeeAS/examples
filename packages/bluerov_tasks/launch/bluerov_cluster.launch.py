@@ -16,7 +16,7 @@ DBSCAN-cluster them, and broadcast the clustered result as a TF child frame.
     topic (→ /bluerov/cluster_pose_results) consumed by the spike search.
 
 Task BTs (and bluerov_tasks/torpedo/move_and_shoot_seq.py) submit cluster
-goals/requests built via mission_planner_release pose_utils/detection_utils.
+goals/requests built via mission_planner_2 pose_utils/detection_utils.
 """
 
 from launch import LaunchDescription

@@ -9,22 +9,22 @@ from geometry_msgs.msg import TransformStamped
 from std_srvs.srv import Trigger
 from tf_transformations import euler_from_quaternion
 
-from mission_planner_release.common.core import shared_action_client
-from mission_planner_release.common.util.namespace_utils import full_key_generator
-from mission_planner_release.common.util.pose_utils import (
+from mission_planner_2.common.core import shared_action_client
+from mission_planner_2.common.util.namespace_utils import full_key_generator
+from mission_planner_2.common.util.pose_utils import (
     create_pose_clustering_goal,
     create_stamped_pose,
     within_threshold_rpy,
     within_threshold_xyz,
 )
 from bluerov_tasks.node_registry import BlueROVSharedAction
-from mission_planner_release.vehicles.shared.trees.blackboard import (
+from mission_planner_2.vehicles.shared.trees.blackboard import (
     DynamicSetBlackboard,
 )
-from mission_planner_release.vehicles.shared.trees.cluster_goto import (
+from mission_planner_2.vehicles.shared.trees.cluster_goto import (
     create_goto_cluster_from_bb_root,
 )
-from mission_planner_release.vehicles.shared.trees.tf_checker import (
+from mission_planner_2.vehicles.shared.trees.tf_checker import (
     create_tf_checker_from_bb_root,
     create_tf_checker_from_constant_root,
 )

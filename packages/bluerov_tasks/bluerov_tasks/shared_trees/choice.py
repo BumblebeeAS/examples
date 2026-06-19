@@ -16,7 +16,7 @@ Pick fish or shark at runtime with:
 import py_trees
 from std_srvs.srv import Trigger
 
-from mission_planner_release.common.core import checked_service
+from mission_planner_2.common.core import checked_service
 
 CHOICE_KEY = "/global/choice_is_fish"
 GET_CHOICE_SERVICE = "/bluerov/choice/get_is_fish"

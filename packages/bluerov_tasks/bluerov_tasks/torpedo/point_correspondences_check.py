@@ -6,14 +6,14 @@ from bb_perception_msgs.msg import PointCorrespondencesStamped
 from bb_perception_msgs.srv import IMPoseEstimatorToggleTemplate
 from rclpy.qos import qos_profile_sensor_data
 
-from mission_planner_release.common.core import checked_service
-from mission_planner_release.vehicles.shared.trees.blackboard import (
+from mission_planner_2.common.core import checked_service
+from mission_planner_2.vehicles.shared.trees.blackboard import (
     DynamicSetBlackboard,
 )
-from mission_planner_release.common.util.detection_utils import (
+from mission_planner_2.common.util.detection_utils import (
     create_img_matching_request,
 )
-from mission_planner_release.common.util.namespace_utils import full_key_generator
+from mission_planner_2.common.util.namespace_utils import full_key_generator
 
 NAMESPACE = "/bluerov/torpedo/correspondences"
 fk = full_key_generator(NAMESPACE)

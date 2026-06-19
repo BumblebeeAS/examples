@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 BlueROV2 goto behaviours — self-contained Locomotion action client built on
-mission_planner_release's generic goto_base (the engine was folded in here so the
+mission_planner_2's generic goto_base (the engine was folded in here so the
 BlueROV goto no longer depends on the AUV-specific goto).
 
 Routes to /bluerov/controls (BlueROVSharedAction.LOCOMOTION) and converts poses
@@ -31,10 +31,10 @@ from rclpy.task import Future
 from transforms3d.euler import quat2euler
 
 from bluerov_tasks.node_registry import BlueROVSharedAction, BlueROVSharedService
-from mission_planner_release.vehicles.shared.trees.blackboard import (
+from mission_planner_2.vehicles.shared.trees.blackboard import (
     convert_to_safe_name,
 )
-from mission_planner_release.vehicles.shared.trees.goto import goto_base
+from mission_planner_2.vehicles.shared.trees.goto import goto_base
 
 
 class FromBlackboard(goto_base.FromBlackboard):

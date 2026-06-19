@@ -9,21 +9,21 @@ from ament_index_python.packages import get_package_prefix
 from bb_perception_msgs.srv import IMPoseEstimatorToggleTemplate
 from lifecycle_msgs.srv import ChangeState
 
-from mission_planner_release.common.core import checked_service, shared_action_client
-from mission_planner_release.common.util.detection_utils import (
+from mission_planner_2.common.core import checked_service, shared_action_client
+from mission_planner_2.common.util.detection_utils import (
     create_end_vision_req,
     create_img_matching_request,
     create_start_vision_req,
 )
-from mission_planner_release.common.util.namespace_utils import full_key_generator
-from mission_planner_release.common.util.pose_utils import (
+from mission_planner_2.common.util.namespace_utils import full_key_generator
+from mission_planner_2.common.util.pose_utils import (
     create_pose_clustering_goal,
     create_stamped_pose,
     within_threshold_rpy,
     within_threshold_xyz,
 )
-from mission_planner_release.vehicles.shared.trees.blackboard import MultiSetBlackboard
-from mission_planner_release.vehicles.shared.trees.cluster_goto import (
+from mission_planner_2.vehicles.shared.trees.blackboard import MultiSetBlackboard
+from mission_planner_2.vehicles.shared.trees.cluster_goto import (
     create_goto_cluster_from_constant_root,
 )
 

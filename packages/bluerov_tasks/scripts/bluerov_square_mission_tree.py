@@ -38,8 +38,8 @@ from arm_and_set_mode import ArmAndSetMode
 from goto import FromConstant as Goto
 from bluerov_tasks.node_registry import BlueROVTreeNode
 from geometry_msgs.msg import PoseStamped
-from mission_planner_release.common.core.bumble_tree import BumbleTree
-from mission_planner_release.common.core.hooks import stop_on_success_or_failure
+from mission_planner_2.common.core.bumble_tree import BumbleTree
+from mission_planner_2.common.core.hooks import stop_on_success_or_failure
 
 SQUARE_SIDE_M = 2.0
 TICK_PERIOD_MS = 100   # 10 Hz — fast poll of action-client futures
