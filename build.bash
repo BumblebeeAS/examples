@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 #
 # Copyright (C) 2018 Open Source Robotics Foundation
 #
@@ -26,9 +28,14 @@ if [ ! -f "docker/Dockerfile" ]; then
     exit 1
 fi
 
+if ! docker image inspect ardusub_sim:humble >/dev/null 2>&1; then
+    echo "Err: base image ardusub_sim:humble not found."
+    echo "Build it first from the sibling ardusub_sim repo:"
+    echo "  cd ../ardusub_sim && ./build.bash"
+    exit 1
+fi
+
 image_plus_tag=$image_name:$(export LC_ALL=C; date +%Y_%m_%d_%H%M)
 docker build --rm -t $image_plus_tag -f docker/Dockerfile docker && \
 docker tag $image_plus_tag $image_name:$image_tag && \
 echo "Built $image_plus_tag and tagged as $image_name:$image_tag"
-echo "To run:"
-echo "./run.bash $image_name:$image_tag"

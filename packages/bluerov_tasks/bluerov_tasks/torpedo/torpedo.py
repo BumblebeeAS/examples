@@ -1,0 +1,485 @@
+import operator
+
+import py_trees
+from bb_perception_msgs.srv import IMPoseEstimatorToggleTemplate
+from lifecycle_msgs.srv import ChangeState
+from mission_planner_2.common.core import checked_service, shared_action_client
+from mission_planner_2.common.util.detection_utils import (
+    create_end_vision_req,
+    create_img_matching_request,
+    create_start_vision_req,
+)
+from mission_planner_2.common.util.namespace_utils import full_key_generator
+from mission_planner_2.common.util.pose_utils import (
+    create_pose_clustering_goal,
+    create_stamped_pose,
+    within_threshold_rpy,
+    within_threshold_xyz,
+)
+from mission_planner_2.vehicles.auv.trees.robosub24.torpedo.point_correspondences_check import (
+    create_point_correspondences_check_root,
+)
+from mission_planner_2.vehicles.shared.trees.blackboard import MultiSetBlackboard
+from mission_planner_2.vehicles.shared.trees.cluster_goto import (
+    create_goto_cluster_from_constant_root,
+)
+
+from bluerov_tasks import goto
+from bluerov_tasks.arm_and_set_mode import ArmAndSetMode
+from bluerov_tasks.node_registry import BlueROVSharedAction
+from bluerov_tasks.shared_trees.choice import create_get_choice_root
+from bluerov_tasks.torpedo.move_and_shoot_seq import (
+    create_firing_root,
+    create_move_and_shoot_generator,
+)
+
+NAMESPACE = "/bluerov/torpedo"
+fk = full_key_generator(NAMESPACE)
+
+######################### UPDATE CONSTANTS HERE #########################
+SELECTED_TEMPLATE = 2  # MUST be 1 or 2 (unused — selector picks via image match)
+
+VISION_SERVER_TOPIC = "/bluerov/torpedo/manage_nodes"
+TOGGLE_TEMPLATE_TOPIC = "/bluerov/torpedo/image_matching/toggle_template"
+POINT_CORRESPONDENCES_TOPIC = "/bluerov/torpedo/image_matching/point_correspondences"
+
+BASE_LINK_FRAME = "base_link"
+CAMERA_FRAME = "front_cam_optical"
+TORPEDO_SHOOTER_LEFT_FRAME = "torpedo_shooter_left_link"
+TORPEDO_SHOOTER_RIGHT_FRAME = "torpedo_shooter_right_link"
+TEMPLATE_FRAME_YOLO = "torpedo/yolo"
+TEMPLATE_FRAME_YOLO_CLUSTERED = "torpedo/yolo/clustered"
+
+TORPEDO_POSE_TOPIC = "/bluerov/torpedo/torpedo/yolo/pose"
+ODOM_TOPIC = "/mavros/odometry/out"
+
+# Pose-clustering tuning (mirrors upstream robosub26 torpedo).
+POSE_CLUSTERING_SYNC_TOLERANCE = 0.1
+POSE_CLUSTERING_MIN_POSES = 4
+
+CENTRE_VIEW_FRAME = "torpedo/centre/view"
+
+ACTUATION_TOPIC_LEFT = "/bluerov/actuation/torpedo/left"
+ACTUATION_TOPIC_RIGHT = "/bluerov/actuation/torpedo/right"
+
+DISTANCE_THRESHOLD = 0.025
+YAW_THRESHOLD = 1.0
+
+CLUSTER_DURATION = 4
+REALIGN_CLUSTER_DURATION = 2
+STABILIZE_DURATION = 3
+WAIT_AFTER_FIRE_DURATION = 3.0
+MATCH_SETTLE_DURATION = 4.0
+NUM_RETRIES = 3
+
+SEARCH_DEPTH = -0.5
+
+TORPEDO_VICINITY_X = -3.0
+TORPEDO_VICINITY_Y = -1.5
+# Yaw=90° in ENU map frame = facing +y (north) toward the panel.
+TORPEDO_VICINITY_YAW_DEG = 90.0
+
+TORPEDO_TEMPLATE_1 = "Task04_Tagging_01.png"
+TORPEDO_TEMPLATE_2 = "Task04_Tagging_02.png"
+
+TEMPLATE_FRAME_OPTICAL_1 = "Task04_Tagging_01_optical"
+TEMPLATE_FRAME_OPTICAL_2 = "Task04_Tagging_02_optical"
+
+# cluster_poses broadcasts "<id>_<i>"; with top_k=1 the TF is "torpedo_{1,2}_0".
+TEMPLATE_FRAME_CLUSTERED_1 = "torpedo_1"
+TEMPLATE_FRAME_CLUSTERED_2 = "torpedo_2"
+
+FISH_SHOOT_FRAME_1 = "torpedo_1_0/fish/view"
+FISH_SHOOT_FRAME_2 = "torpedo_2_0/fish/view"
+
+SHARK_SHOOT_FRAME_1 = "torpedo_1_0/shark/view"
+SHARK_SHOOT_FRAME_2 = "torpedo_2_0/shark/view"
+
+SHOOT_REPEATS = 2
+MAX_ALIGN_FAILURE = 5
+#########################################################################
+
+# Internal keys — should not collide as long as NAMESPACE above is unique.
+_POSE_KEY = fk("pose")
+_POSE_FRAME_KEY = fk("pose_frame")
+_ANCHOR_FRAME_KEY = fk("anchor_frame")
+_CORRECT_TEMPLATE_KEY = fk("correct_template")
+_CORRECT_REQ_KEY = fk("correct_req")
+_CORRECT_FISH_KEY = fk("correct_fish")
+_CORRECT_SHARK_KEY = fk("correct_shark")
+_CORRECT_CLUSTERED_KEY = fk("correct_clustered")
+
+
+def create_torpedo_root(
+    world_to_torp_yaw: float,
+    zero_yaw_key: str,
+):
+    """
+    Create the root of the torpedo tree.
+
+    1 - arm + GUIDED + dive to search depth
+    2 - move to torpedo vicinity (between the two panels)
+    3 - cluster the panel pose (cluster_poses action) into
+        torpedo/yolo/clustered and goto the centre-view frame
+    4 - check point correspondences for both templates
+    5 - select correct template + enable detections
+    6 - move and shoot first torpedo
+    7 - return to centre, move and shoot second torpedo
+    8 - stop vision
+
+    Fallback: if any of the above fails, fire both torpedoes blindly so the
+    competition score doesn't go to zero on a perception miss.
+    """
+    move_and_shoot_gen = create_move_and_shoot_generator(
+        anchor_frame_key=_ANCHOR_FRAME_KEY,
+        torpedo_shooter_left_frame=TORPEDO_SHOOTER_LEFT_FRAME,
+        torpedo_shooter_right_frame=TORPEDO_SHOOTER_RIGHT_FRAME,
+        choice_key="/global/choice_is_fish",
+        pose_key=_POSE_KEY,
+        pose_frame_key=_POSE_FRAME_KEY,
+        fish_shoot_frame_key=_CORRECT_FISH_KEY,
+        shark_shoot_frame_key=_CORRECT_SHARK_KEY,
+        template_frame_optical_key=_CORRECT_TEMPLATE_KEY,
+        template_frame_optical_clustered_key=_CORRECT_CLUSTERED_KEY,
+        cluster_duration=CLUSTER_DURATION,
+        realign_cluster_duration=REALIGN_CLUSTER_DURATION,
+        actuation_topic_left=ACTUATION_TOPIC_LEFT,
+        actuation_topic_right=ACTUATION_TOPIC_RIGHT,
+        distance_threshold=DISTANCE_THRESHOLD,
+        yaw_threshold=YAW_THRESHOLD,
+        retries=MAX_ALIGN_FAILURE,
+        stabilization_duration=2.5,
+        num_retries_clustering=NUM_RETRIES,
+        wait_after_fire_duration=WAIT_AFTER_FIRE_DURATION,
+        shoot_repeats=SHOOT_REPEATS,
+        world_to_torp_yaw=world_to_torp_yaw,
+        zero_yaw_key=zero_yaw_key,
+    )
+
+    seq_launch_torpedo = py_trees.composites.Sequence(
+        name="Launch torpedo",
+        memory=True,
+    )
+
+    srv_start_vision = checked_service.FromConstant(
+        name="Start vision",
+        service_type=ChangeState,
+        service_name=VISION_SERVER_TOPIC,
+        service_request=create_start_vision_req(),
+        check_func=lambda x: x.success,
+    )
+
+    retry_start_vision = py_trees.decorators.Retry(
+        name="Retry start vision",
+        child=srv_start_vision,
+        num_failures=NUM_RETRIES,
+    )
+
+    # Coarse approach to panel vicinity at search depth, yawed to face the panel.
+    goto_torpedo_vicinity = goto.FromConstant(
+        name="Goto torpedo vicinity",
+        pose=create_stamped_pose(
+            frame_id="map",
+            position_x=TORPEDO_VICINITY_X,
+            position_y=TORPEDO_VICINITY_Y,
+            yaw=TORPEDO_VICINITY_YAW_DEG,
+        ),
+        anchor_frame_name=BASE_LINK_FRAME,
+        specified_heading=True,
+        depth_override_value=SEARCH_DEPTH,
+    )
+
+    def _make_cluster_goal(collection_duration):
+        return create_pose_clustering_goal(
+            odom_topic=ODOM_TOPIC,
+            pose_stamped_topic=TORPEDO_POSE_TOPIC,
+            clustered_child_frame_id=TEMPLATE_FRAME_YOLO_CLUSTERED,
+            collection_duration=collection_duration,
+            sync_tolerance=POSE_CLUSTERING_SYNC_TOLERANCE,
+            min_poses=POSE_CLUSTERING_MIN_POSES,
+        )
+
+    def _make_cluster_torp(label, collection_duration):
+        return py_trees.decorators.Retry(
+            name=f"Retry Cluster Torp ({label})",
+            child=shared_action_client.FromConstant(
+                name=f"Cluster torp poses ({label})",
+                shared_action=BlueROVSharedAction.CLUSTER,
+                action_goal=_make_cluster_goal(collection_duration),
+            ),
+            num_failures=NUM_RETRIES,
+        )
+
+    retry_cluster_torp = _make_cluster_torp("initial", CLUSTER_DURATION)
+    retry_cluster_torp_check = _make_cluster_torp(
+        "centre check", REALIGN_CLUSTER_DURATION
+    )
+
+    goto_torp_centre = goto.FromConstant(
+        name="Goto torp centre",
+        pose=create_stamped_pose(CENTRE_VIEW_FRAME),
+        anchor_frame_name=CAMERA_FRAME,
+    )
+
+    cluster_and_goto_centre = py_trees.decorators.FailureIsSuccess(
+        name="Force succeed cluster and goto centre",
+        child=create_goto_cluster_from_constant_root(
+            cluster_node=retry_cluster_torp,
+            cluster_node_check=retry_cluster_torp_check,
+            goto_node=goto_torp_centre,
+            retries=2,
+            start_frames=[CAMERA_FRAME, BASE_LINK_FRAME],
+            goto_pose_frame=CENTRE_VIEW_FRAME,
+            stabilization_duration=2.5,
+            name="Cluster and goto centre",
+            within_threshold_list=[
+                within_threshold_xyz(DISTANCE_THRESHOLD),
+                within_threshold_rpy(YAW_THRESHOLD),
+            ],
+        ),
+    )
+
+    seq_check_point_correspondences = create_point_correspondences_check_root(
+        toggle_template_topic=TOGGLE_TEMPLATE_TOPIC,
+        camera_frame=CAMERA_FRAME,
+        template_frame_1=TORPEDO_TEMPLATE_1,
+        template_frame_2=TORPEDO_TEMPLATE_2,
+        template_frame_optical_1=TEMPLATE_FRAME_OPTICAL_1,
+        template_frame_optical_2=TEMPLATE_FRAME_OPTICAL_2,
+        num_retries=NUM_RETRIES,
+        points_correspondences_topic=POINT_CORRESPONDENCES_TOPIC,
+        correct_template_key=_CORRECT_TEMPLATE_KEY,
+    )
+
+    sel_correct_stuff = py_trees.composites.Selector(
+        name="Select correct frames to set",
+        memory=True,
+    )
+
+    seq_set_template_1 = py_trees.composites.Sequence(
+        name="Set for template 1",
+        memory=True,
+    )
+
+    check_template = py_trees.behaviours.CheckBlackboardVariableValue(
+        name="Check template",
+        check=py_trees.common.ComparisonExpression(
+            variable=_CORRECT_TEMPLATE_KEY,
+            value=TEMPLATE_FRAME_OPTICAL_1,
+            operator=operator.eq,
+        ),
+    )
+
+    set_multi_template_1 = MultiSetBlackboard(
+        name="Set template 1 stuff",
+        keys=[
+            _CORRECT_REQ_KEY,
+            _CORRECT_FISH_KEY,
+            _CORRECT_SHARK_KEY,
+            _CORRECT_CLUSTERED_KEY,
+        ],
+        values=[
+            create_img_matching_request(
+                enable=True,
+                camera_frame_id=CAMERA_FRAME,
+                template_name=TORPEDO_TEMPLATE_1,
+            ),
+            FISH_SHOOT_FRAME_1,
+            SHARK_SHOOT_FRAME_1,
+            TEMPLATE_FRAME_CLUSTERED_1,
+        ],
+        overwrite=True,
+    )
+
+    seq_set_template_1.add_children(
+        [
+            check_template,
+            set_multi_template_1,
+        ]
+    )
+
+    set_multi_template_2 = MultiSetBlackboard(
+        name="Set template 2 stuff",
+        keys=[
+            _CORRECT_REQ_KEY,
+            _CORRECT_FISH_KEY,
+            _CORRECT_SHARK_KEY,
+            _CORRECT_CLUSTERED_KEY,
+        ],
+        values=[
+            create_img_matching_request(
+                enable=True,
+                camera_frame_id=CAMERA_FRAME,
+                template_name=TORPEDO_TEMPLATE_2,
+            ),
+            FISH_SHOOT_FRAME_2,
+            SHARK_SHOOT_FRAME_2,
+            TEMPLATE_FRAME_CLUSTERED_2,
+        ],
+        overwrite=True,
+    )
+
+    sel_correct_stuff.add_children(
+        [
+            seq_set_template_1,
+            set_multi_template_2,
+        ]
+    )
+
+    srv_enable_correct_detections_frame = checked_service.FromBlackboard(
+        name="Enable detections",
+        service_name=TOGGLE_TEMPLATE_TOPIC,
+        service_type=IMPoseEstimatorToggleTemplate,
+        key_request=_CORRECT_REQ_KEY,
+        check_func=lambda x: x.new_state,
+    )
+
+    retry_enable_detections = py_trees.decorators.Retry(
+        name="retry enable correct srv",
+        child=srv_enable_correct_detections_frame,
+        num_failures=NUM_RETRIES,
+    )
+
+    move_and_shoot_first = move_and_shoot_gen(first=True)
+
+    goto_back_centre = goto.FromConstant(
+        name="Go back to centre",
+        pose=create_stamped_pose(CENTRE_VIEW_FRAME),
+        anchor_frame_name=CAMERA_FRAME,
+    )
+
+    move_and_shoot_second = move_and_shoot_gen(first=False)
+
+    seq_stop_vision = py_trees.composites.Sequence(
+        name="Stop vision",
+        memory=True,
+    )
+
+    srv_disable_detections = checked_service.FromConstant(
+        name="Disable detections",
+        service_name=TOGGLE_TEMPLATE_TOPIC,
+        service_type=IMPoseEstimatorToggleTemplate,
+        service_request=create_img_matching_request(
+            enable=False,
+            camera_frame_id=CAMERA_FRAME,
+            template_name="",
+        ),
+        check_func=lambda x: x is not None and x.new_state is False,
+    )
+
+    retry_disable_detections = py_trees.decorators.Retry(
+        name="Retry Disable Detections",
+        child=srv_disable_detections,
+        num_failures=NUM_RETRIES,
+    )
+
+    force_success_disable_detections = py_trees.decorators.FailureIsSuccess(
+        name="Force success disable detections",
+        child=retry_disable_detections,
+    )
+
+    srv_end_vision = checked_service.FromConstant(
+        name="End vision",
+        service_type=ChangeState,
+        service_name=VISION_SERVER_TOPIC,
+        service_request=create_end_vision_req(),
+        check_func=lambda x: x.success,
+    )
+
+    retry_end_vision = py_trees.decorators.Retry(
+        name="Retry End Vision",
+        child=srv_end_vision,
+        num_failures=NUM_RETRIES,
+    )
+
+    force_success_end_vision = py_trees.decorators.FailureIsSuccess(
+        name="Force success end vision",
+        child=retry_end_vision,
+    )
+
+    seq_stop_vision.add_children(
+        children=[
+            force_success_disable_detections,
+            force_success_end_vision,
+        ],
+    )
+
+    settle_before_match = py_trees.timers.Timer(
+        name="Settle before template match",
+        duration=MATCH_SETTLE_DURATION,
+    )
+
+    seq_launch_torpedo.add_children(
+        children=[
+            retry_start_vision,
+            goto_torpedo_vicinity,
+            cluster_and_goto_centre,
+            settle_before_match,
+            seq_check_point_correspondences,
+            sel_correct_stuff,
+            retry_enable_detections,
+            move_and_shoot_first,
+            goto_back_centre,
+            move_and_shoot_second,
+            seq_stop_vision,
+        ],
+    )
+
+    sel_always_fire_fallback = py_trees.composites.Selector(
+        name="Always fire torpedo fallback",
+        memory=True,
+    )
+
+    seq_repeated_firing_fallback = py_trees.composites.Sequence(
+        name="Always fire torpedoes fallback sequence",
+        memory=True,
+    )
+
+    seq_repeated_firing_fallback.add_children(
+        [
+            create_firing_root(
+                actuation_topic=ACTUATION_TOPIC_LEFT,
+                torp_string="first",
+                shoot_repeats=SHOOT_REPEATS,
+                wait_after_fire_duration=WAIT_AFTER_FIRE_DURATION,
+            ),
+            create_firing_root(
+                actuation_topic=ACTUATION_TOPIC_RIGHT,
+                torp_string="second",
+                shoot_repeats=SHOOT_REPEATS,
+                wait_after_fire_duration=WAIT_AFTER_FIRE_DURATION,
+            ),
+        ]
+    )
+
+    sel_always_fire_fallback.add_children(
+        [
+            seq_launch_torpedo,
+            seq_repeated_firing_fallback,
+        ]
+    )
+
+    # Resolve the fish/shark choice into /global/choice_is_fish.
+    get_choice = create_get_choice_root()
+
+    set_global_base_link = py_trees.behaviours.SetBlackboardVariable(
+        name="Set /global/base_link",
+        variable_name="/global/base_link",
+        variable_value=BASE_LINK_FRAME,
+        overwrite=True,
+    )
+
+    root = py_trees.composites.Sequence(
+        name="Torpedo mission root",
+        memory=True,
+    )
+    root.add_children(
+        [
+            ArmAndSetMode(name="arm_and_set_mode"),
+            get_choice,
+            set_global_base_link,
+            sel_always_fire_fallback,
+        ]
+    )
+
+    return root
