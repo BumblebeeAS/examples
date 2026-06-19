@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-BlueROV2 action/service registry and TreeNode for mission_planner_2 integration.
-"""
 import rclpy.action
 from bb_controls_msgs.action import Locomotion
 from bb_perception_msgs.action import ClusterPosesAction

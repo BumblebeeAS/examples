@@ -29,11 +29,13 @@ def generate_launch_description():
         executable="convert_to_controls_pose.py",
         name="convert_to_controls_pose",
         output="screen",
-        parameters=[{
-            "controls_frame": "map",
-            "base_frame": "base_link",
-            "odom_topic": "/mavros/odometry/out",
-        }],
+        parameters=[
+            {
+                "controls_frame": "map",
+                "base_frame": "base_link",
+                "odom_topic": "/mavros/odometry/out",
+            }
+        ],
         remappings=[
             ("convert_to_controls_pose", "/bluerov/convert_to_controls_pose"),
         ],

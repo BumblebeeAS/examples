@@ -1,14 +1,8 @@
-"""BlueROV2 torpedo mission BT"""
-
 import operator
-import os
-import sys
 
 import py_trees
-from ament_index_python.packages import get_package_prefix
 from bb_perception_msgs.srv import IMPoseEstimatorToggleTemplate
 from lifecycle_msgs.srv import ChangeState
-
 from mission_planner_2.common.core import checked_service, shared_action_client
 from mission_planner_2.common.util.detection_utils import (
     create_end_vision_req,
@@ -22,29 +16,21 @@ from mission_planner_2.common.util.pose_utils import (
     within_threshold_rpy,
     within_threshold_xyz,
 )
+from mission_planner_2.vehicles.auv.trees.robosub24.torpedo.point_correspondences_check import (
+    create_point_correspondences_check_root,
+)
 from mission_planner_2.vehicles.shared.trees.blackboard import MultiSetBlackboard
 from mission_planner_2.vehicles.shared.trees.cluster_goto import (
     create_goto_cluster_from_constant_root,
 )
 
+from bluerov_tasks import goto
+from bluerov_tasks.arm_and_set_mode import ArmAndSetMode
 from bluerov_tasks.node_registry import BlueROVSharedAction
 from bluerov_tasks.shared_trees.choice import create_get_choice_root
 from bluerov_tasks.torpedo.move_and_shoot_seq import (
     create_firing_root,
     create_move_and_shoot_generator,
-)
-from bluerov_tasks.torpedo.point_correspondences_check import (
-    create_point_correspondences_check_root,
-)
-
-_BLUEROV_SCRIPTS_DIR = os.path.join(
-    get_package_prefix("bluerov_tasks"), "lib", "bluerov_tasks"
-)
-if _BLUEROV_SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, _BLUEROV_SCRIPTS_DIR)
-import goto
-from arm_and_set_mode import (
-    ArmAndSetMode,
 )
 
 NAMESPACE = "/bluerov/torpedo"
@@ -64,10 +50,6 @@ TORPEDO_SHOOTER_RIGHT_FRAME = "torpedo_shooter_right_link"
 TEMPLATE_FRAME_YOLO = "torpedo/yolo"
 TEMPLATE_FRAME_YOLO_CLUSTERED = "torpedo/yolo/clustered"
 
-# Torpedo-panel pose-estimator PoseStamped topic. The torpedo estimator runs
-# under the /bluerov/torpedo namespace with object_frame_id "torpedo/yolo", so
-# its PoseStamped publishes at <namespace>/<object_frame_id>/pose.
-# VERIFY via `ros2 topic list` at runtime.
 TORPEDO_POSE_TOPIC = "/bluerov/torpedo/torpedo/yolo/pose"
 ODOM_TOPIC = "/mavros/odometry/out"
 
@@ -103,9 +85,7 @@ TORPEDO_TEMPLATE_2 = "Task04_Tagging_02.png"
 TEMPLATE_FRAME_OPTICAL_1 = "Task04_Tagging_01_optical"
 TEMPLATE_FRAME_OPTICAL_2 = "Task04_Tagging_02_optical"
 
-# clustered_child_frame_id passed to the move_and_shoot cluster goal. cluster_poses
-# broadcasts the result as "<id>_<i>", so with top_k=1 the actual TF is
-# "torpedo_{1,2}_0" — which is what the shoot frames below are rooted on.
+# cluster_poses broadcasts "<id>_<i>"; with top_k=1 the TF is "torpedo_{1,2}_0".
 TEMPLATE_FRAME_CLUSTERED_1 = "torpedo_1"
 TEMPLATE_FRAME_CLUSTERED_2 = "torpedo_2"
 
@@ -195,10 +175,7 @@ def create_torpedo_root(
         num_failures=NUM_RETRIES,
     )
 
-    # Coarse approach: fly directly to panel v1's vicinity at search depth
-    # and yaw to face the panel before cluster-and-goto-centre refines. Same
-    # pattern as the bin tree's goto_bin_vicinity, but with specified_heading
-    # so the front camera is pointed roughly at the panel after the move.
+    # Coarse approach to panel vicinity at search depth, yawed to face the panel.
     goto_torpedo_vicinity = goto.FromConstant(
         name="Goto torpedo vicinity",
         pose=create_stamped_pose(
@@ -482,10 +459,7 @@ def create_torpedo_root(
         ]
     )
 
-    # Resolve the fish/shark choice into `/global/choice_is_fish` (a
-    # Trigger.Response, read via .success by move_and_shoot's frame-selector
-    # lambda). Queries the choice server (/bluerov/choice/get_is_fish) so the
-    # operator can pick the target, falling back to fish if it isn't running.
+    # Resolve the fish/shark choice into /global/choice_is_fish.
     get_choice = create_get_choice_root()
 
     set_global_base_link = py_trees.behaviours.SetBlackboardVariable(

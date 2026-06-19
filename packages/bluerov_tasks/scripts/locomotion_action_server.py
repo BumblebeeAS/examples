@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""
-ROS 2 action server: bb_controls_msgs/Locomotion (/bluerov/controls)
-
-Drives the BlueROV2 to a goal pose expressed as body-frame setpoints
-(forward, sidemove, depth, heading) via MAVROS setpoint_position/local.
-
-Implements the bb_controls_msgs/Locomotion interface used by
-mission_planner_2's goto behaviours.  Only move_rel=True is needed for
-the square mission but move_rel=False (absolute map-frame) is also handled.
-
-Each target is published once because ArduSub retains GUIDED position targets.
-Re-publishing continuously restarts its trajectory planner.
-"""
+"""ROS 2 action server for locomotion via MAVROS."""
 
 import math
 import time as py_time
@@ -40,7 +28,6 @@ DEFAULT_YAW_THRESHOLD_DEG = 5.0  # degrees
 
 
 class LocomotionActionServer(Node):
-
     def __init__(self) -> None:
         super().__init__("locomotion_action_server")
 

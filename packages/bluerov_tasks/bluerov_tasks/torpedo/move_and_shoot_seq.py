@@ -1,14 +1,7 @@
-import os
-import sys
-
 import numpy as np
 import py_trees
 import py_trees_ros
-from ament_index_python.packages import get_package_prefix
 from geometry_msgs.msg import TransformStamped
-from std_srvs.srv import Trigger
-from tf_transformations import euler_from_quaternion
-
 from mission_planner_2.common.core import shared_action_client
 from mission_planner_2.common.util.namespace_utils import full_key_generator
 from mission_planner_2.common.util.pose_utils import (
@@ -17,7 +10,6 @@ from mission_planner_2.common.util.pose_utils import (
     within_threshold_rpy,
     within_threshold_xyz,
 )
-from bluerov_tasks.node_registry import BlueROVSharedAction
 from mission_planner_2.vehicles.shared.trees.blackboard import (
     DynamicSetBlackboard,
 )
@@ -28,13 +20,11 @@ from mission_planner_2.vehicles.shared.trees.tf_checker import (
     create_tf_checker_from_bb_root,
     create_tf_checker_from_constant_root,
 )
+from std_srvs.srv import Trigger
+from tf_transformations import euler_from_quaternion
 
-_BLUEROV_SCRIPTS_DIR = os.path.join(
-    get_package_prefix("bluerov_tasks"), "lib", "bluerov_tasks"
-)
-if _BLUEROV_SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, _BLUEROV_SCRIPTS_DIR)
-import goto  # noqa: E402  (bluerov_tasks/scripts/goto.py)
+from bluerov_tasks import goto
+from bluerov_tasks.node_registry import BlueROVSharedAction
 
 NAMESPACE = "/bluerov/torpedo/move_and_shoot"
 fk = full_key_generator(NAMESPACE)
@@ -50,8 +40,7 @@ ODOM_TOPIC = "/mavros/odometry/out"
 
 TORPEDO_POINTS_POSE_TOPIC = "/bluerov/torpedo/points/pose"
 
-# Small sizing for the precise-approach cluster (few poses collected over the
-# short collection_duration while the panel is in view).
+# Small sizing for the precise-approach cluster (few poses, short duration).
 CLUSTER_MIN_POSES = 3
 CLUSTER_MIN_CLUSTER_SIZE = 2
 CLUSTER_SYNC_TOLERANCE = 0.05
@@ -124,8 +113,8 @@ def create_move_and_shoot_generator(
     def f(first=True):
         if first:
             anchor_frame = torpedo_shooter_left_frame
-            shoot_pose_sel = (
-                lambda choice, fish_shoot_frame, shark_shoot_frame: create_stamped_pose(
+            shoot_pose_sel = lambda choice, fish_shoot_frame, shark_shoot_frame: (
+                create_stamped_pose(
                     fish_shoot_frame if choice.success else shark_shoot_frame
                 )
             )
@@ -136,8 +125,8 @@ def create_move_and_shoot_generator(
             torp_string = "first"
         else:
             anchor_frame = torpedo_shooter_right_frame
-            shoot_pose_sel = (
-                lambda choice, fish_shoot_frame, shark_shoot_frame: create_stamped_pose(
+            shoot_pose_sel = lambda choice, fish_shoot_frame, shark_shoot_frame: (
+                create_stamped_pose(
                     shark_shoot_frame if choice.success else fish_shoot_frame
                 )
             )
