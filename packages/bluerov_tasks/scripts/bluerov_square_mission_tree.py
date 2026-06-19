@@ -62,10 +62,30 @@ def create_square_mission_root() -> py_trees.behaviour.Behaviour:
     root = py_trees.composites.Sequence(name='square_mission', memory=True)
     root.add_children([
         ArmAndSetMode(name='arm_and_set_mode'),
-        Goto(name='leg1_forward',  pose=_make_pose(x=SQUARE_SIDE_M,  y=0.0)),
-        Goto(name='leg2_left',     pose=_make_pose(x=0.0,            y=SQUARE_SIDE_M)),
-        Goto(name='leg3_backward', pose=_make_pose(x=-SQUARE_SIDE_M, y=0.0)),
-        Goto(name='leg4_right',    pose=_make_pose(x=0.0,            y=-SQUARE_SIDE_M)),
+        Goto(
+            name='leg1_forward',
+            pose=_make_pose(x=SQUARE_SIDE_M, y=0.0),
+            is_relative_movement=True,
+            ignore_depth=True,
+        ),
+        Goto(
+            name='leg2_left',
+            pose=_make_pose(x=0.0, y=SQUARE_SIDE_M),
+            is_relative_movement=True,
+            ignore_depth=True,
+        ),
+        Goto(
+            name='leg3_backward',
+            pose=_make_pose(x=-SQUARE_SIDE_M, y=0.0),
+            is_relative_movement=True,
+            ignore_depth=True,
+        ),
+        Goto(
+            name='leg4_right',
+            pose=_make_pose(x=0.0, y=-SQUARE_SIDE_M),
+            is_relative_movement=True,
+            ignore_depth=True,
+        ),
     ])
     return root
 
@@ -73,7 +93,7 @@ def create_square_mission_root() -> py_trees.behaviour.Behaviour:
 def main(args=None) -> None:
     rclpy.init(args=args)
 
-    py_trees.logging.level = py_trees.logging.Level.DEBUG
+    py_trees.logging.level = py_trees.logging.Level.INFO
 
     root = create_square_mission_root()
     tree = BumbleTree(root=root)

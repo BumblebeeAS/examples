@@ -24,7 +24,7 @@ TICK_PERIOD_MS = 100  # 10 Hz
 
 def main(args=None) -> None:
     rclpy.init(args=args)
-    py_trees.logging.level = py_trees.logging.Level.DEBUG
+    py_trees.logging.level = py_trees.logging.Level.INFO
 
     root = create_bin_root()
     tree = BumbleTree(root=root)

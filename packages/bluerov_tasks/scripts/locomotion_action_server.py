@@ -9,8 +9,8 @@ Implements the bb_controls_msgs/Locomotion interface used by
 mission_planner_2's goto behaviours.  Only move_rel=True is needed for
 the square mission but move_rel=False (absolute map-frame) is also handled.
 
-Publish rate is capped at 1 Hz — ArduSub replans its trajectory on every
-setpoint and will move very slowly at higher rates (see bluerov_movement.py).
+Each target is published once because ArduSub retains GUIDED position targets.
+Re-publishing continuously restarts its trajectory planner.
 """
 
 import math
@@ -33,7 +33,7 @@ from tf2_geometry_msgs import do_transform_pose_stamped
 
 BASE_FRAME = "base_link"
 SETPOINT_FRAME = "map"
-PUBLISH_RATE_HZ = 1.0
+MONITOR_RATE_HZ = 5.0
 DEFAULT_TIMEOUT_SEC = 60.0
 DEFAULT_DIST_THRESHOLD = 0.2  # metres
 DEFAULT_YAW_THRESHOLD_DEG = 5.0  # degrees
@@ -152,6 +152,12 @@ class LocomotionActionServer(Node):
             f"{target_in_map.pose.position.z:.2f})"
         )
 
+        # ArduSub retains a GUIDED position target until it is replaced.
+        # Re-publishing the same target continuously restarts its trajectory
+        # planner and can prevent movement until publication stops.
+        target_in_map.header.stamp = self.get_clock().now().to_msg()
+        self._setpoint_pub.publish(target_in_map)
+
         start_time = self.get_clock().now()
 
         while rclpy.ok():
@@ -164,9 +170,6 @@ class LocomotionActionServer(Node):
                 goal_handle.abort()
                 self.get_logger().warn(f"Goal timed out after {elapsed:.1f}s")
                 return self._make_result(Locomotion.Result.STATUS_FAILURE)
-
-            target_in_map.header.stamp = self.get_clock().now().to_msg()
-            self._setpoint_pub.publish(target_in_map)
 
             if self._current_pose is not None:
                 dist = self._distance(self._current_pose, target_in_map)
@@ -203,7 +206,7 @@ class LocomotionActionServer(Node):
             else:
                 self.get_logger().warn("No pose from /mavros/local_position/pose yet")
 
-            py_time.sleep(1.0 / PUBLISH_RATE_HZ)
+            py_time.sleep(1.0 / MONITOR_RATE_HZ)
 
         goal_handle.abort()
         return self._make_result(Locomotion.Result.STATUS_ABORTED)

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 #
 # Copyright (C) 2018 Open Source Robotics Foundation
 #
@@ -37,5 +39,3 @@ image_plus_tag=$image_name:$(export LC_ALL=C; date +%Y_%m_%d_%H%M)
 docker build --rm -t $image_plus_tag -f docker/Dockerfile docker && \
 docker tag $image_plus_tag $image_name:$image_tag && \
 echo "Built $image_plus_tag and tagged as $image_name:$image_tag"
-echo "To run:"
-echo "./run.bash $image_name:$image_tag"

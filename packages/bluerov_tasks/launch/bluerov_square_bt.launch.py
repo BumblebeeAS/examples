@@ -1,4 +1,7 @@
 from launch import LaunchDescription
+from launch.actions import EmitEvent, RegisterEventHandler
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
 from launch_ros.actions import Node
 
 
@@ -43,10 +46,24 @@ def generate_launch_description():
         output="screen",
     )
 
+    shutdown_when_mission_finishes = RegisterEventHandler(
+        OnProcessExit(
+            target_action=mission_tree_node,
+            on_exit=[
+                EmitEvent(
+                    event=Shutdown(
+                        reason="Square mission finished",
+                    )
+                )
+            ],
+        )
+    )
+
     return LaunchDescription(
         [
             action_server_node,
             convert_to_controls_pose_node,
             mission_tree_node,
+            shutdown_when_mission_finishes,
         ]
     )

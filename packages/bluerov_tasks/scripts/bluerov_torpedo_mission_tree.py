@@ -29,7 +29,7 @@ ZERO_YAW_KEY = "/global/zero_yaw"
 
 def main(args=None) -> None:
     rclpy.init(args=args)
-    py_trees.logging.level = py_trees.logging.Level.DEBUG
+    py_trees.logging.level = py_trees.logging.Level.INFO
 
     root = create_torpedo_root(
         world_to_torp_yaw=WORLD_TO_TORP_YAW_RAD,

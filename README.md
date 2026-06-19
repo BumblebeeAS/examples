@@ -2,113 +2,112 @@
 
 ## BlueROV with ArduSub
 
+### Quickstart
+
+We assume the ROS workspace is `~/workspaces/bluerov_ws`. Change the paths accordingly if needed.
+
+Clone the repositories:
+
+```bash
+cd ~/workspaces/bluerov_ws/src
+vcs import --recursive < examples/bluerov_ws.repos
+```
+
 Build the minimal sim image first:
 
 ```bash
-cd ~/workspaces/isaac_ros-dev/src/ardusub_sim
+cd ~/workspaces/bluerov_ws/src/ardusub_sim
 ./build.bash
 ```
 
 Build the examples image with perception and mission-tree dependencies:
 
 ```bash
-cd ~/workspaces/isaac_ros-dev/src/examples
+cd ~/workspaces/bluerov_ws/src/examples
 ./build.bash
 ```
 
-## Start The Container
+### Start the container
 
-Install `rocker` if needed: https://github.com/osrf/rocker
+#### Native Ubuntu with NVIDIA
+
+Install [Rocker](https://github.com/osrf/rocker), then run:
 
 ```bash
-cd ~/workspaces/isaac_ros-dev/src/examples
+cd ~/workspaces/bluerov_ws/src/examples
 ./run.bash bluerov_ws:humble
 ```
 
-## Build The Workspace
+#### WSL 2 with WSLg
+
+```bash
+docker run --rm -it \
+  --gpus all \
+  --device=/dev/dxg \
+  --network=host \
+  --ipc=host \
+  -e DISPLAY="$DISPLAY" \
+  -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
+  -e XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+  -e PULSE_SERVER="$PULSE_SERVER" \
+  -e NVIDIA_DRIVER_CAPABILITIES=all \
+  -e MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA \
+  -e LD_LIBRARY_PATH=/usr/lib/wsl/lib \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  -v /mnt/wslg:/mnt/wslg \
+  -v /usr/lib/wsl:/usr/lib/wsl:ro \
+  -v ~/workspaces/bluerov_ws:/root/HOST/bluerov_ws \
+  bluerov_ws:humble
+```
+
+The WSL command exposes WSLg's X11/Wayland sockets and the `/dev/dxg` virtual
+GPU device, allowing Gazebo to use hardware-accelerated rendering.
+
+### Verify GPU rendering
+
+Inside the container, before launching Gazebo:
+
+```bash
+glxinfo -B | grep -E "OpenGL vendor|OpenGL renderer"
+```
+
+On native Linux, the renderer should identify the NVIDIA GPU. Under WSLg, it
+should mention D3D12 and the GPU. It should not report `llvmpipe`, which is
+software rendering.
+
+### Build the workspace
 
 Inside the container:
 
 ```bash
-cd /root/HOST/isaac_ros-dev
+cd /root/HOST/bluerov_ws
 source /opt/ros/humble/setup.bash
-vcs import --recursive src < src/examples/bluerov_ws.repos
-colcon build --symlink-install
+colcon build --symlink-install \
+  --packages-up-to bluerov_tasks bluerov_sim bb_worlds
 source install/setup.bash
 ```
 
-`--recursive` is required: `image_matching` vendors the XFeat model code as a
-git submodule (`accelerated_features`). Without it, `simple_matcher_node` dies
-with `ModuleNotFoundError: feature_matcher.models.accelerated_features.modules`.
-If you already imported without it, recover with:
+### Demo: Square Mission
+
+Inside the container:
 
 ```bash
-cd src/image_matching && git submodule update --init --recursive
-```
-
-`bluerov_ws.repos` pins `foxglove-sdk` to 3.2.5 (`9323b15a`), which builds
-clean with `--symlink-install`. Don't bump it to 3.4.x / `main` — those install
-the bridge via `install(FILES $<TARGET_FILE:...>)`, which `--symlink-install`
-cannot resolve.
-
-Make sure the sibling `src/ardusub_sim` repo is present before building.
-
-## Demo: Square Mission
-
-Start QGroundControl on the host, then inside the container:
-
-```bash
-cd /root/HOST/isaac_ros-dev
+cd /root/HOST/bluerov_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 tmuxp load src/examples/bluerov_mission.yaml
 ```
 
-The sim pane starts Gazebo, ArduSub, and MAVROS. The mission pane starts the
-locomotion server and behavior tree that drives a square.
-
-Useful checks:
-
-```bash
-ros2 topic echo /mavros/state --once
-ros2 topic echo /mavros/local_position/pose --once
-ros2 action list | grep controls
-```
-
-## Demo: Bin Mission
+### Demo: Bin Mission
 
 ```bash
 tmuxp load src/examples/bluerov_bin_mission.yaml
 ```
 
-This starts separate panes for sim, controls, clustering, vision, and the bin
-behavior tree.
-
-## Demo: Torpedo Mission
+### Demo: Torpedo Mission
 
 ```bash
 tmuxp load src/examples/bluerov_torpedo_mission.yaml
-```
-
-This starts separate panes for sim, controls, clustering, torpedo vision, and
-the torpedo behavior tree.
-
-## Manual Launch
-
-Terminal 1:
-
-```bash
-ros2 launch bluerov_sim bluerov_sim.launch.py \
-  world_name:=robosub_2025_pool \
-  ardusub:=true \
-  mavros:=true \
-  gui:=true
-```
-
-Terminal 2:
-
-```bash
-ros2 launch bluerov_tasks bluerov_square_bt.launch.py
 ```
 
 ## Useful Commands

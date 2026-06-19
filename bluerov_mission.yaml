@@ -1,15 +1,8 @@
-# tmuxp session: full BlueROV2 sim + behaviour-tree square mission.
-# Load with:  tmuxp load bluerov_mission.yaml
-#
-# Opens one tmux window with two tiled panes. See the per-pane comments
-# below for exactly what each one starts.
+# BlueROV2 sim + behaviour-tree square mission.
 
 session_name: bluerov_mission
 start_directory: /root/HOST/bluerov_ws
 
-# Session-scoped tmux options. tmuxp applies these before the panes are
-# created so history-limit takes effect for every pane. `mouse` is quoted
-# so YAML doesn't coerce "on" into a boolean before tmuxp sees it.
 options:
   mouse: "on"
   history-limit: 100000
@@ -18,44 +11,19 @@ windows:
   - window_name: mission
     layout: tiled
     panes:
-
-      # ── sim ────────────────────────────────────────────────────────────────
-      # Brings up everything needed for the vehicle to exist and be reachable:
-      #   • Gazebo Harmonic with the RoboSub 2025 pool world
-      #   • ArduSub SITL (same firmware that runs on the real BlueROV2)
-      #   • MAVROS — ROS 2 ↔ MAVLink bridge (publishes /mavros/local_position/pose,
-      #     accepts setpoints on /mavros/setpoint_position/local, broadcasts MAVLink
-      #     telemetry on UDP 14550 for QGroundControl on the host)
-      #   • ground_truth_to_mavros — feeds Gazebo odom into /mavros/odometry/out
-      #     and broadcasts the map→base_link TF
-      #   • world_objects_to_markers — publishes world SDF objects as MarkerArray
       - pane_name: sim
         shell_command:
           - source /opt/ros/humble/setup.bash
           - source install/setup.bash
           - ros2 launch bluerov_sim bluerov_sim.launch.py
-            world_name:=robosub2025
+            world_name:=robosub_2025_pool
             ardusub:=true
             mavros:=true
             gui:=true
             paused:=false
 
-      # ── bt_mission ─────────────────────────────────────────────────────────
-      # The mission itself. Starts three nodes:
-      #   • locomotion_action_server — bb_controls_msgs/Locomotion server on
-      #     /bluerov/controls; converts map-frame goals into 1 Hz setpoints
-      #     published to /mavros/setpoint_position/local
-      #   • convert_to_controls_pose (frames package) — service that converts
-      #     body-frame (base_link) poses to the map frame using current odometry
-      #   • bluerov_square_mission_tree — py_trees behaviour tree that arms the
-      #     vehicle, switches to GUIDED, and drives a 2 m × 2 m square in body
-      #     frame: forward → left → backward → right
       - pane_name: bt_mission
         shell_command:
           - source /opt/ros/humble/setup.bash
           - source install/setup.bash
-          # Wait until ArduSub SITL is actually up and MAVROS reports the FCU
-          # link connected before arming. Starting the tree against a still-
-          # initializing (or paused) sim makes the vehicle lurch/pitch on the
-          # first physics step. Then give the EKF a few seconds to settle.
           - ros2 launch bluerov_tasks bluerov_square_bt.launch.py
