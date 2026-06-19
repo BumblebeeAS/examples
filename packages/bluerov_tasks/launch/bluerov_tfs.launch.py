@@ -1,10 +1,4 @@
-"""Static task TFs for BlueROV2 bin/torpedo missions.
-
-Spawns:
-- `frames/static_tfs_node.py` loaded with BlueROV-specific YAMLs from
-  `bluerov_tasks/config/`.
-
-"""
+"""Static task TFs for BlueROV2 bin/torpedo missions."""
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument

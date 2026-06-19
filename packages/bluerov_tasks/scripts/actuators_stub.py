@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Stub actuator node for BlueROV2 sim.
-
-Exposes std_srvs/Trigger services that the bin and torpedo behaviour trees
-call to fire the dropper and torpedoes. There is no physics here — each
-Trigger logs the call and publishes a short-lived Marker at the relevant
-actuator TF so Foxglove can visually confirm the firing.
-
-Real DetachableJoint-based physics is deferred (Stage 4 in
-.claude/plans/i-want-to-try-humming-crescent.md).
-"""
+"""Stub actuator node for BlueROV2 sim — Trigger services for dropper/torpedoes with Marker feedback."""
 
 import rclpy
 from rclpy.node import Node
@@ -20,7 +11,9 @@ _MARKER_TOPIC = "/bluerov/actuation/markers"
 _MARKER_LIFETIME_SEC = 5
 
 
-def _make_marker(node: Node, marker_id: int, frame_id: str, color: tuple[float, float, float]) -> Marker:
+def _make_marker(
+    node: Node, marker_id: int, frame_id: str, color: tuple[float, float, float]
+) -> Marker:
     msg = Marker()
     msg.header.stamp = node.get_clock().now().to_msg()
     msg.header.frame_id = frame_id
@@ -42,16 +35,23 @@ class ActuatorsStub(Node):
         self._marker_pub = self.create_publisher(Marker, _MARKER_TOPIC, 10)
 
         self.create_service(
-            Trigger, "/bluerov/actuation/dropper",
+            Trigger,
+            "/bluerov/actuation/dropper",
             lambda req, res: self._handle(req, res, "dropper_link", 0, (1.0, 0.8, 0.0)),
         )
         self.create_service(
-            Trigger, "/bluerov/actuation/torpedo/left",
-            lambda req, res: self._handle(req, res, "torpedo_shooter_left_link", 1, (1.0, 0.2, 0.2)),
+            Trigger,
+            "/bluerov/actuation/torpedo/left",
+            lambda req, res: self._handle(
+                req, res, "torpedo_shooter_left_link", 1, (1.0, 0.2, 0.2)
+            ),
         )
         self.create_service(
-            Trigger, "/bluerov/actuation/torpedo/right",
-            lambda req, res: self._handle(req, res, "torpedo_shooter_right_link", 2, (0.2, 0.4, 1.0)),
+            Trigger,
+            "/bluerov/actuation/torpedo/right",
+            lambda req, res: self._handle(
+                req, res, "torpedo_shooter_right_link", 2, (0.2, 0.4, 1.0)
+            ),
         )
 
         self.get_logger().info(

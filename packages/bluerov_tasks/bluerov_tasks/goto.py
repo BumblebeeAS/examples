@@ -1,22 +1,5 @@
-#!/usr/bin/env python3
-"""
-BlueROV2 goto behaviours — self-contained Locomotion action client built on
-mission_planner_2's generic goto_base (the engine was folded in here so the
-BlueROV goto no longer depends on the AUV-specific goto).
+"""BlueROV2 goto behaviours."""
 
-Routes to /bluerov/controls (BlueROVSharedAction.LOCOMOTION) and converts poses
-via /bluerov/convert_to_controls_pose (frames package). The anchor frame defaults
-to 'base_link' (FLU body frame).
-"""
-
-import os
-import sys
-
-_DIR = os.path.dirname(os.path.abspath(__file__))
-if _DIR not in sys.path:
-    sys.path.insert(0, _DIR)
-
-import math
 import time
 import uuid
 from typing import Any, Callable
@@ -247,7 +230,7 @@ class FromConstant(FromBlackboard):
             "/", convert_to_safe_name(name)
         )
         pose_key = py_trees.blackboard.Blackboard.absolute_name(
-            namespace, f'pose_{str(uuid.uuid4()).replace("-", "")}'
+            namespace, f"pose_{str(uuid.uuid4()).replace('-', '')}"
         )
 
         super().__init__(
@@ -505,7 +488,7 @@ class NFromConstant(NFromBlackboard):
             "/", convert_to_safe_name(name)
         )
         pose_key = py_trees.blackboard.Blackboard.absolute_name(
-            namespace, f'pose_{str(uuid.uuid4()).replace("-", "")}'
+            namespace, f"pose_{str(uuid.uuid4()).replace('-', '')}"
         )
 
         super().__init__(

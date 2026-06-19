@@ -79,8 +79,6 @@ def create_template_selector_root(
         variable_name=clustering_goal_key,
         variable_value=create_pose_clustering_goal(
             odom_topic="/mavros/odometry/out",
-            # Bin points pose estimator publishes every matched-template pose to a
-            # single FIXED output topic. VERIFY via `ros2 topic list` at runtime.
             pose_stamped_topic="/bluerov/bin/points/pose",
             clustered_child_frame_id=template_frame_optical_clustered,
             collection_duration=clustering_duration,
@@ -124,8 +122,6 @@ def create_template_selector_root(
         variable_name=clustering_goal_key,
         variable_value=create_pose_clustering_goal(
             odom_topic="/mavros/odometry/out",
-            # Bin points pose estimator publishes every matched-template pose to a
-            # single FIXED output topic. VERIFY via `ros2 topic list` at runtime.
             pose_stamped_topic="/bluerov/bin/points/pose",
             clustered_child_frame_id=template_frame_optical_clustered,
             collection_duration=clustering_duration,

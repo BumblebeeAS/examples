@@ -1,17 +1,10 @@
 import operator
-import os
-import sys
 
 import py_trees
 import py_trees_ros
-from ament_index_python.packages import get_package_prefix
 from bb_perception_msgs.msg import PointCorrespondencesStamped
 from bb_perception_msgs.srv import IMPoseEstimatorToggleTemplate
 from lifecycle_msgs.srv import ChangeState
-from rclpy.qos import qos_profile_sensor_data
-from std_msgs.msg import UInt8
-from std_srvs.srv import Trigger
-
 from mission_planner_2.common.core import checked_service, shared_action_client
 from mission_planner_2.common.util.detection_utils import (
     create_cluster_poses_srv_request,
@@ -25,52 +18,38 @@ from mission_planner_2.common.util.pose_utils import (
     tf_to_stamped_pose,
     within_threshold_xyz,
 )
-from bluerov_tasks.node_registry import BlueROVSharedAction
 from mission_planner_2.vehicles.auv.trees.robosub24.bins.helpers import (
     find_acute_angle,
-)
-from bluerov_tasks.bins.template_selector import (
-    create_template_selector_root,
 )
 from mission_planner_2.vehicles.shared.trees.blackboard import DynamicSetBlackboard
 from mission_planner_2.vehicles.shared.trees.cluster_goto import (
     create_goto_cluster_from_bb_root,
 )
-from bluerov_tasks.shared_trees.choice import create_get_choice_root
-from bluerov_tasks.shared_trees.cluster_decision import cluster_decision
 from mission_planner_2.vehicles.shared.trees.search import (
     create_new_search_bot_layered_square_root,
 )
 from mission_planner_2.vehicles.shared.trees.tf_checker import (
     create_tf_checker_from_constant_root,
 )
+from rclpy.qos import qos_profile_sensor_data
+from std_msgs.msg import UInt8
+from std_srvs.srv import Trigger
 
-# Pull the BlueROV-routed goto wrappers from scripts/goto.py — they live in
-# the installed `lib/bluerov_tasks/` directory (ament_cmake `install(PROGRAMS …)`),
-# not in this package, so import via the ament-resolved prefix.
-_BLUEROV_SCRIPTS_DIR = os.path.join(
-    get_package_prefix("bluerov_tasks"), "lib", "bluerov_tasks"
+from bluerov_tasks import goto
+from bluerov_tasks.arm_and_set_mode import ArmAndSetMode
+from bluerov_tasks.bins.template_selector import (
+    create_template_selector_root,
 )
-if _BLUEROV_SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, _BLUEROV_SCRIPTS_DIR)
-import goto  # noqa: E402  (bluerov_tasks/scripts/goto.py)
-from arm_and_set_mode import ArmAndSetMode  # noqa: E402  (bluerov_tasks/scripts/arm_and_set_mode.py)
+from bluerov_tasks.node_registry import BlueROVSharedAction
+from bluerov_tasks.shared_trees.choice import create_get_choice_root
+from bluerov_tasks.shared_trees.cluster_decision import cluster_decision
 
-# Upstream uses generate_namespace(), which walks the caller path for
-# `/trees/` — bluerov_tasks/bins/bins.py isn't under any `/trees/`, so we
-# hardcode the namespace that path WOULD have produced in mission_planner_2
-# (`/auv/robosub24/bins/bins`). Keeps blackboard keys collision-free without
-# moving the file or forking namespace_utils.
 NAMESPACE = "/bluerov/bins"
 fk = full_key_generator(NAMESPACE)
 
 ######################### UPDATE CONSTANTS HERE #########################
 VISION_SERVER_TOPIC = "/bluerov/bin/manage_nodes"
 
-# Bin pose-estimator PoseStamped topic. The bin estimator runs under the
-# /bluerov/bin namespace with object_frame_id "bin/yolo" (confirmed via
-# `ros2 param get .../bin_pose_estimator_node object_frame_id`), so its
-# PoseStamped publishes at <namespace>/<object_frame_id>/pose.
 BIN_POSE_TOPIC = "/bluerov/bin/bin/yolo/pose"
 ODOM_TOPIC = "/mavros/odometry/out"
 CLUSTER_SERVICE_NAME = "/bluerov/cluster_poses_srv"
@@ -97,7 +76,7 @@ STABILIZE_CONTROLS_DURATION = 5.0
 RETRIES = 4
 NUM_RETRIES = 3
 
-# Negative z = 1.3 m below surface in map/ENU (see SEARCH_DEPTH note).
+# Negative z = 1.3 m below surface in map/ENU.
 BIN_DEPTH_OVERRIDE_VALUE = -1.3
 
 BIN_CENTRE_VIEW_FRAME = "bin/centre/view"
@@ -113,10 +92,7 @@ SEARCH_PATTERN = [
     {"x": -0.5, "y": 0.0, "z": 0.0},
 ]
 
-# Bin pose in the robosub_2025_pool world (bb_worlds/worlds/robosub_2025_pool.world:
-# `<include><uri>model://robosub25/bin</uri><pose>-6 4.5 -2 0 0 0</pose>`). Hardcoded
-# to give the BT a coarse approach point before its layered-square search refines
-# the position via YOLO detections.
+# Bin pose in the robosub_2025_pool world (coarse approach point).
 BIN_WORLD_X = -6.0
 BIN_WORLD_Y = 4.5
 
@@ -124,14 +100,9 @@ SEARCH_FWD = 1.0
 SEARCH_BACK = 0.3
 SEARCH_LEFT = 0.5
 SEARCH_RIGHT = 0.5
-# Number of concentric square layers the pose spike-search sweeps. With 1 layer
-# the vehicle runs a single 4-waypoint box while cluster_poses streams results;
-# the search exits as soon as decision_func (cluster_decision) sees enough
-# clustered poses. Bump up (3+) to widen the sweep if detections are sparse.
 NUM_SQUARES = 1
 OFFSET_COEFF = 1.0
-# Map/ENU convention: negative z = below surface (see scripts/bluerov_movement.py
-# self.depth = -2.0). Upstream AUV uses NED where positive = down — flipped here.
+# Map/ENU convention: negative z = below surface.
 SEARCH_DEPTH = -0.3
 BETWEEN_DROPS_WAIT = 3.5
 EXTRA_DROP_WAIT = 0.5
@@ -186,11 +157,7 @@ def create_bin_root():
         num_failures=NUM_RETRIES,
     )
 
-    # Coarse approach: fly to the bin's known world (x, y) at search depth
-    # before the search square fires. Pose is in map frame, so anchor_frame
-    # stays at base_link (no offset subtraction needed) and depth_override
-    # forces SEARCH_DEPTH so we don't dive to the bin floor on approach.
-    # specified_heading=False — we don't care which way we're facing yet.
+    # Step 1: Coarse approach to the bin's known world (x, y) at search depth
     goto_bin_vicinity = goto.FromConstant(
         name="Goto bin vicinity",
         pose=create_stamped_pose(
@@ -203,12 +170,7 @@ def create_bin_root():
         depth_override_value=SEARCH_DEPTH,
     )
 
-    # Pose-based spike search: stream ClusterPoseResultArray from the
-    # cluster_poses service (which clusters BIN_POSE_TOPIC against odom into
-    # the broadcast frame TEMPLATE_FRAME_YOLO_CLUSTERED), decide via
-    # cluster_decision, then goto the clustered pose. The full request (with
-    # cluster_interval > 0 so the service publishes periodic results) is set
-    # on the blackboard before the search root ticks.
+    # Step 1b: Pose-based spike search via the cluster_poses service
     set_spike_cluster_request = py_trees.behaviours.SetBlackboardVariable(
         name="Set spike cluster request",
         variable_name=_SPIKE_CLUSTER_REQUEST_KEY,
@@ -270,8 +232,6 @@ def create_bin_root():
         depth_override_value=BIN_DEPTH_OVERRIDE_VALUE,
     )
 
-    stabilise = py_trees.timers.Timer("Stabilise", duration=STABILIZE_CONTROLS_DURATION)
-
     # Step 3: Enable image matching detections
     srv_enable_detections = checked_service.FromConstant(
         name="Enable detections",
@@ -282,7 +242,7 @@ def create_bin_root():
             camera_frame_id=CAMERA_FRAME,
             template_name=TEMPLATE_NAME,
         ),
-        check_func=lambda x: x.new_state == True,
+        check_func=lambda x: x.new_state,
     )
 
     retry_enable_detections = py_trees.decorators.Retry(
@@ -343,8 +303,7 @@ def create_bin_root():
             camera_frame_id=CAMERA_FRAME,
             template_name=ROTATED_TEMPLATE_NAME,
         ),
-        check_func=lambda x: x.new_state
-        == True,  # check if the service call was successful
+        check_func=lambda x: x.new_state,  # service call was successful
     )
 
     retry_enable_rotated_detections = py_trees.decorators.Retry(
@@ -424,8 +383,7 @@ def create_bin_root():
         service_name=TOGGLE_TEMPLATE_TOPIC,
         key_request=_BIN_CORRECT_DETECTIONS_REQ_KEY,
         key_response=_BIN_CORRECT_ENABLE_DETECTIONS_KEY,
-        check_func=lambda x: x.new_state
-        == True,  # check if the service call was successful
+        check_func=lambda x: x.new_state,  # service call was successful
     )
 
     retry_enable_correct_detections = py_trees.decorators.Retry(
@@ -490,21 +448,6 @@ def create_bin_root():
         ),
     )
 
-    # Uncomment the following lines if you want to use the TF-based goto cluster
-    # seq_goto_cluster = create_goto_cluster_from_bb_tf_tf_root(
-    #     cluster_node=action_cluster_for_goto,
-    #     cluster_node_check=action_cluster_for_goto_check,
-    #     goto_node=goto_align_to_target,
-    #     distance_threshold=0.05,
-    #     retries=3,
-    #     tf_frame_key=_GOTO_FRAME_KEY,
-    #     within_threshold=within_threshold_dist,
-    # )
-
-    stabilise_before_dropping = py_trees.timers.Timer(
-        "Stabilise before dropping", duration=STABILIZE_CONTROLS_DURATION
-    )
-
     # Step 10: Set dropper actuation value
     set_dropper_actuation = py_trees.behaviours.SetBlackboardVariable(
         name="Set dropper actuation",
@@ -551,7 +494,7 @@ def create_bin_root():
             camera_frame_id=CAMERA_FRAME,
             template_name=TEMPLATE_NAME,
         ),
-        check_func=lambda x: x is not None and x.new_state == False,
+        check_func=lambda x: x is not None and not x.new_state,
     )
 
     retry_disable_detections = py_trees.decorators.Retry(
@@ -602,7 +545,6 @@ def create_bin_root():
             extract_tf,
             calculate_acute_pose,
             goto_bin_centre,
-            # stabilise,
             retry_enable_detections,
             sub_get_points_first_sequence_retry,
             retry_enable_rotated_detections,
@@ -688,17 +630,11 @@ def create_bin_root():
         ]
     )
 
-    # Resolve the fish/shark choice into `/global/choice_is_fish` (a
-    # Trigger.Response, read via .success in template_selector's choice
-    # selector). Queries the choice server (/bluerov/choice/get_is_fish) so the
-    # operator can pick which bin to drop into, falling back to fish if it isn't
-    # running. Without this the bin tree would KeyError on the choice key.
+    # Resolve the fish/shark choice into /global/choice_is_fish.
     get_choice = create_get_choice_root()
 
-    # Top-level sequence: arm + GUIDED first, resolve the choice, then run the
-    # bin mission (with its own success/fallback selector). Mirrors the square
-    # BT root in scripts/bluerov_square_mission_tree.py so the bin mission no
-    # longer relies on the operator arming via QGroundControl first.
+    # Top-level sequence: arm + GUIDED, resolve the choice, then run the bin
+    # mission.
     root = py_trees.composites.Sequence(
         name="Bin mission root",
         memory=True,

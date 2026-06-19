@@ -129,8 +129,10 @@ class BlueROVSquareMission(Node):
         if self.state == "INIT":
             # Try to initialize services
             if not self.services_initialized:
-                armed = self.is_armed or self.arm()
-                guided = self.is_guided_mode or self.set_guided_mode()
+                if not self.is_armed:
+                    self.arm()
+                if not self.is_guided_mode:
+                    self.set_guided_mode()
 
                 if self.is_armed and self.is_guided_mode:
                     self.services_initialized = True

@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-py_trees behaviour: ArmAndSetMode
-
-One-shot behaviour that arms the vehicle and sets GUIDED mode via MAVROS
-service calls, using the async pattern from bluerov_movement.py.
-
-Returns SUCCESS once both services confirm.
-Returns RUNNING while waiting for the FCU or retrying a rejected request.
-"""
+"""py_trees behaviour: arm the vehicle and set GUIDED mode via MAVROS."""
 
 import time
 
