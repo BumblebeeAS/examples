@@ -7,8 +7,10 @@ The locomotion / service / TF plane that every task BT needs:
     by subtracting the URDF shooter offset before returning the goal)
   - locomotion_action_server.py — /bluerov/controls Locomotion action server
   - convert_to_controls_pose.py — /bluerov/convert_to_controls_pose service
-  - actuators_stub.py — /bluerov/actuation/{dropper,torpedo/left,torpedo/right}
-    Trigger services (task-agnostic; the BT picks the one it needs)
+  - actuators_sim.py — /bluerov/actuation/{dropper,torpedo/left,torpedo/right}
+    Trigger services (task-agnostic; the BT picks the one it needs). Each Trigger
+    spawns a real Gazebo entity (Either a marker that sinks into the bin, or a torpedo
+    that launches forward and auto-despawns).
 
 Cluster_tf, vision pipeline, and the BT each run in their own panes (see
 bluerov_cluster.launch.py and the per-task vision/bt launches) so each
@@ -48,24 +50,28 @@ def generate_launch_description() -> LaunchDescription:
         executable="convert_to_controls_pose.py",
         name="convert_to_controls_pose",
         output="screen",
-        parameters=[{
-            "controls_frame": "map",
-            "base_frame": "base_link",
-            "odom_topic": "/mavros/odometry/out",
-        }],
+        parameters=[
+            {
+                "controls_frame": "map",
+                "base_frame": "base_link",
+                "odom_topic": "/mavros/odometry/out",
+            }
+        ],
         remappings=[("convert_to_controls_pose", "/bluerov/convert_to_controls_pose")],
     )
 
     actuators = Node(
         package="bluerov_tasks",
-        executable="actuators_stub.py",
-        name="actuators_stub",
+        executable="actuators_sim.py",
+        name="actuators_sim",
         output="screen",
     )
 
-    return LaunchDescription([
-        tfs_launch,
-        locomotion_server,
-        convert_to_controls_pose,
-        actuators,
-    ])
+    return LaunchDescription(
+        [
+            tfs_launch,
+            locomotion_server,
+            convert_to_controls_pose,
+            actuators,
+        ]
+    )
