@@ -53,8 +53,8 @@ repositories:
     depth: 1
   ml_models:
     type: git
-    url: https://github.com/BumblebeeAS/ml_models.git
-    version: robosub25
+    url: https://huggingface.co/BumblebeeAS/robosub25
+    version: main
   pose_estimator:
     type: git
     url: https://github.com/BumblebeeAS/pose_estimator.git

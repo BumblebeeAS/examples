@@ -13,6 +13,9 @@ cd ~/workspaces/bluerov_ws/src
 vcs import --recursive < examples/bluerov_ws.repos
 ```
 
+> **Note:** `ml_models` is hosted on Hugging Face.
+> Install [Git LFS](https://git-lfs.com/) **before** importing.
+
 Build the minimal sim image first:
 
 ```bash
