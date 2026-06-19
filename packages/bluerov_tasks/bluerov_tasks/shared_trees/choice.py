@@ -2,7 +2,7 @@
 
 The bin/torpedo trees branch on a `/global/choice_is_fish` blackboard key that
 holds a ``std_srvs/Trigger.Response`` (read via its ``.success`` field — see
-``bluerov_tasks/bins/choice_selector.py`` and
+``mission_planner_2 .../robosub24/bins/choice_selector.py`` and
 ``bluerov_tasks/torpedo/move_and_shoot_seq.py``). This module builds the subtree
 that populates that key from the choice server (``/bluerov/choice/get_is_fish``,
 served by ``choice_server_node.py``), falling back to fish if the server isn't

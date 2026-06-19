@@ -4,7 +4,7 @@ import py_trees
 
 from mission_planner_2.common.util.detection_utils import create_img_matching_request
 from mission_planner_2.common.util.pose_utils import create_pose_clustering_goal
-from bluerov_tasks.bins.choice_selector import (
+from mission_planner_2.vehicles.auv.trees.robosub24.bins.choice_selector import (
     create_choice_selector_root,
 )
 from mission_planner_2.vehicles.shared.trees.blackboard import DynamicSetBlackboard

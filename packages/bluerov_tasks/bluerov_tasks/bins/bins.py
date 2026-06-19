@@ -26,7 +26,9 @@ from mission_planner_2.common.util.pose_utils import (
     within_threshold_xyz,
 )
 from bluerov_tasks.node_registry import BlueROVSharedAction
-from bluerov_tasks.bins.helpers import find_acute_angle
+from mission_planner_2.vehicles.auv.trees.robosub24.bins.helpers import (
+    find_acute_angle,
+)
 from bluerov_tasks.bins.template_selector import (
     create_template_selector_root,
 )

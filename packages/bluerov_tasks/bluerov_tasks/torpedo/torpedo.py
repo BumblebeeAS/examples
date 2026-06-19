@@ -33,7 +33,7 @@ from bluerov_tasks.torpedo.move_and_shoot_seq import (
     create_firing_root,
     create_move_and_shoot_generator,
 )
-from bluerov_tasks.torpedo.point_correspondences_check import (
+from mission_planner_2.vehicles.auv.trees.robosub24.torpedo.point_correspondences_check import (
     create_point_correspondences_check_root,
 )
 
