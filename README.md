@@ -118,6 +118,12 @@ tmuxp load src/examples/bluerov_bin_mission.yaml
 ```bash
 tmuxp load src/examples/bluerov_torpedo_mission.yaml
 ```
+### Foxglove layouts
+
+Prebuilt Foxglove layouts for the Bin and Torpedo missions are available at
+[BumblebeeAS/controlkitv3](https://github.com/BumblebeeAS/controlkitv3/tree/main/foxglove_layouts).
+Import them into Foxglove Studio for a ready-made view of the relevant topics,
+making it easier to visualize and debug each mission.
 
 ## Useful Commands
 
