@@ -23,6 +23,7 @@ from visualization_msgs.msg import Marker
 MARKER_TOPIC = "/bluerov/actuation/markers"
 MARKER_LIFETIME_SEC = 5
 GZ_TIMEOUT_S = 5.0
+Z_OFFSET = 0.05
 
 DROPPER_FRAME = "dropper_link"
 TORPEDO_FRAMES = {
@@ -162,7 +163,7 @@ class ActuatorsSim(Node):
         q = tf.transform.rotation
         req = (
             f'sdf_filename: "{sdf_path}" name: "{name}" allow_renaming: true '
-            f"pose: {{position: {{x: {t.x} y: {t.y} z: {t.z}}} "
+            f"pose: {{position: {{x: {t.x} y: {t.y} z: {t.z + Z_OFFSET}}} "
             f"orientation: {{x: {q.x} y: {q.y} z: {q.z} w: {q.w}}}}}"
         )
         return self.world_service(
