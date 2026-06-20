@@ -92,6 +92,14 @@ source install/setup.bash
 
 ### Demo: Square Mission
 
+The square mission is a control smoke test:
+
+1. Arm and enter `GUIDED`.
+2. Move 2 m forward.
+3. Move 2 m left.
+4. Move 2 m backward.
+5. Move 2 m right.
+
 Inside the container:
 
 ```bash
@@ -117,6 +125,11 @@ tmuxp load src/examples/bluerov_torpedo_mission.yaml
 ros2 topic echo /bluerov/odom --once
 ros2 topic echo /mavros/state --once
 ros2 topic echo /mavros/local_position/pose --once
+ros2 topic echo /bluerov/controls/_action/feedback --once
 ros2 service call /mavros/cmd/arming mavros_msgs/srv/CommandBool "{value: true}"
 ros2 service call /mavros/set_mode mavros_msgs/srv/SetMode "{custom_mode: 'GUIDED'}"
 ```
+
+## Documentation
+
+- [Architecture and conventions](docs/architecture.md)
