@@ -36,6 +36,7 @@ windows:
           - 'echo "  pick FISH : ros2 service call /bluerov/choice/set_is_fish std_srvs/srv/SetBool \"{data: true}\""'
           - 'echo "  pick SHARK: ros2 service call /bluerov/choice/set_is_fish std_srvs/srv/SetBool \"{data: false}\""'
           - ros2 run bluerov_tasks choice_server_node.py
+            --ros-args -p use_sim_time:=true
 
       - pane_name: cluster
         shell_command:

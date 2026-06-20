@@ -8,8 +8,11 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description() -> LaunchDescription:
+    use_sim_time = LaunchConfiguration("use_sim_time")
+
     return LaunchDescription(
         [
+            DeclareLaunchArgument("use_sim_time", default_value="true"),
             DeclareLaunchArgument(
                 "single_tfs_file",
                 default_value=PathJoinSubstitution(
@@ -24,9 +27,9 @@ def generate_launch_description() -> LaunchDescription:
                 "grouped_tfs_file",
                 default_value=PathJoinSubstitution(
                     [
-                        FindPackageShare("bluerov_tasks"),
-                        "config",
-                        "bluerov_grouped_tfs.yaml",
+                        FindPackageShare("mission_planner_2"),
+                        "cfg",
+                        "grouped_tfs.yaml",
                     ]
                 ),
             ),
@@ -41,7 +44,7 @@ def generate_launch_description() -> LaunchDescription:
                         "single_tfs_file": LaunchConfiguration("single_tfs_file"),
                         "grouped_tfs_file": LaunchConfiguration("grouped_tfs_file"),
                         "default_suffix": LaunchConfiguration("default_suffix"),
-                        "use_sim_time": True,
+                        "use_sim_time": use_sim_time,
                     }
                 ],
             ),

@@ -219,6 +219,10 @@ def create_move_and_shoot_generator(
             name=f"Go to {torp_string} target",
             pose_key=pose_key,
             anchor_frame_name=anchor_frame,
+            x_threshold=distance_threshold,
+            y_threshold=distance_threshold,
+            z_threshold=distance_threshold,
+            yaw_threshold=yaw_threshold,
         )
 
         goto_cluster = py_trees.decorators.FailureIsSuccess(
