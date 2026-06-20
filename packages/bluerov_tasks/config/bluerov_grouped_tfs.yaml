@@ -19,14 +19,14 @@ torpedo:
       - "torpedo_1_0"
       - "torpedo_1/yolo"
     x: 0.268
-    y: 0.09
+    y: 0.02 
   - name: torpedo_2_fish
     suffix: fish
     parents:
       - "torpedo_2_0"
       - "torpedo_2/yolo"
     x: 0.429
-    y: 0.084
+    y: 0.014
   - name: torpedo_2_shark
     suffix: shark
     parents:
