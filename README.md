@@ -109,11 +109,15 @@ tmuxp load src/examples/bluerov_mission.yaml
 
 ### Demo: Bin Mission
 
+https://github.com/user-attachments/assets/6c262df8-bac6-492a-aef1-9e8cfc30d8a8
+
 ```bash
 tmuxp load src/examples/bluerov_bin_mission.yaml
 ```
 
 ### Demo: Torpedo Mission
+
+https://github.com/user-attachments/assets/9a9c25c5-637a-403a-b34d-4048f9afb5e0
 
 ```bash
 tmuxp load src/examples/bluerov_torpedo_mission.yaml
