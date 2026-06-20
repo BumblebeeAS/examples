@@ -1,8 +1,8 @@
 # Static TFs for BlueROV2 bin / torpedo missions.
 #
-# Task-frame offsets describing the RoboSub-2025 bin and torpedo-panel
-# geometry. Same physical objects as AUV4 sees, so offsets are copied
-# verbatim from src/mission_planner_2/cfg/single_tfs.yaml.
+# BlueROV-specific subset of the RoboSub bin and torpedo task frames.
+# The geometric offsets match mission_planner_2/cfg/single_tfs.yaml, while
+# the parent frames use the current indexed cluster outputs.
 #
 # The actuator TFs (dropper, torpedo_shooter_*) are NOT listed here —
 # they're emitted by robot_state_publisher from bluerov2.urdf.

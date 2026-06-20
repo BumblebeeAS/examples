@@ -1,12 +1,14 @@
 """BlueROV2 cluster_poses action + service servers."""
 
 from launch import LaunchDescription
-from launch.actions import GroupAction
+from launch.actions import DeclareLaunchArgument, GroupAction
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, PushRosNamespace
 
 
 def generate_launch_description() -> LaunchDescription:
-    sim_time_param = {"use_sim_time": True}
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    sim_time_param = {"use_sim_time": use_sim_time}
 
     cluster_servers = GroupAction(
         [
@@ -28,4 +30,9 @@ def generate_launch_description() -> LaunchDescription:
         ]
     )
 
-    return LaunchDescription([cluster_servers])
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument("use_sim_time", default_value="true"),
+            cluster_servers,
+        ]
+    )

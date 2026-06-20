@@ -4,11 +4,15 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import GroupAction
+from launch.actions import DeclareLaunchArgument, GroupAction
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import LifecycleNode, Node, PushRosNamespace
 
 
 def generate_launch_description() -> LaunchDescription:
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    sim_time_param = {"use_sim_time": use_sim_time}
+
     cfg = os.path.join(
         get_package_share_directory("bluerov_tasks"),
         "config",
@@ -24,19 +28,19 @@ def generate_launch_description() -> LaunchDescription:
                 executable="yolo_node",
                 name="torpedo_yolo_node",
                 namespace="",
-                parameters=[cfg],
+                parameters=[cfg, sim_time_param],
             ),
             Node(
                 package="pose_estimator",
                 executable="torpedo_pose_estimator_node",
                 name="torpedo_pose_estimator_node",
-                parameters=[cfg],
+                parameters=[cfg, sim_time_param],
             ),
             Node(
                 package="vision_pipeline",
                 executable="lifecycle_manager_node",
                 name="lifecycle_manager_node",
-                parameters=[cfg],
+                parameters=[cfg, sim_time_param],
             ),
             # Image matcher: provides the toggle_template service (BT picks
             # Task04_Tagging_01.png vs _02.png) and the point_correspondences
@@ -49,7 +53,7 @@ def generate_launch_description() -> LaunchDescription:
                 package="image_matching",
                 executable="simple_matcher_node",
                 name="simple_matcher_node",
-                parameters=[cfg],
+                parameters=[cfg, sim_time_param],
             ),
             # Subscribes to image_matching/point_correspondences, runs PnP, and
             # publishes a PoseStamped topic for object_frame_id (set by
@@ -59,9 +63,14 @@ def generate_launch_description() -> LaunchDescription:
                 package="pose_estimator",
                 executable="points_pose_estimator_node",
                 name="torpedo_points_pose_estimator_node",
-                parameters=[cfg],
+                parameters=[cfg, sim_time_param],
             ),
         ]
     )
 
-    return LaunchDescription([vision])
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument("use_sim_time", default_value="true"),
+            vision,
+        ]
+    )

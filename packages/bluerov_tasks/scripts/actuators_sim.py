@@ -50,7 +50,7 @@ class ActuatorsSim(Node):
     def __init__(self) -> None:
         super().__init__("actuators_sim")
 
-        self.declare_parameter("world_name", "robosub_2025_pool")
+        self.declare_parameter("world_name", "")
         self.declare_parameter("world_frame", "map")
         self.declare_parameter("torpedo_speed", 4.0)
         self.declare_parameter("torpedo_lifetime", 8.0)
