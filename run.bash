@@ -16,6 +16,6 @@ rocker \
   --nvidia \
   --x11 \
   --git \
-  --volume "${WORKSPACE_DIR}:/root/HOST/bluerov_ws" \
   --network=host \
+  --volume "${WORKSPACE_DIR}:/root/HOST/bluerov_ws" \
   "${IMAGE_NAME}"

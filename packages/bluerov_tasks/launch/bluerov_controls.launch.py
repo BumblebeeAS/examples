@@ -42,8 +42,8 @@ def generate_launch_description() -> LaunchDescription:
 
     actuators = Node(
         package="bluerov_tasks",
-        executable="actuators_sim.py",
-        name="actuators_sim",
+        executable="actuators_stub.py",
+        name="actuators_stub",
         output="screen",
     )
 
