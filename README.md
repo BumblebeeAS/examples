@@ -1,145 +1,30 @@
-# Examples
+# examples
 
-## BlueROV with ArduSub
+Example applications for Bumblebee simulators, organized one subdirectory per
+project. Each subdir is a self-contained sub-workspace (its own `packages/`,
+`build.bash` / `run.bash`, `docker/`, and `*.repos` manifest):
 
-### Quickstart
+| Directory | Simulator base | Contents |
+|-----------|----------------|----------|
+| [`bluerov/`](bluerov/) | `ardusub_sim:humble` | BlueROV2 / ArduSub missions, behaviour trees, perception (`bluerov_tasks`) |
+| [`multivehicle/`](multivehicle/) | `multivehicle_sim:humble` | Multivehicle missions, BlueBoat control, PX4 offboard demo (`multivehicle_examples`) |
 
-We assume the ROS workspace is `~/workspaces/bluerov_ws`. Change the paths accordingly if needed.
+Pick the project you want and follow its README.
 
-Clone the repositories:
+## Building
 
-```bash
-cd ~/workspaces/bluerov_ws/src
-vcs import --recursive < examples/bluerov_ws.repos
-```
-
-> **Note:** `ml_models` is hosted on Hugging Face.
-> Install [Git LFS](https://git-lfs.com/) **before** importing.
-
-Build the minimal sim image first:
-
-```bash
-cd ~/workspaces/bluerov_ws/src/ardusub_sim
-./build.bash
-```
-
-Build the examples image with perception and mission-tree dependencies:
+`colcon build` discovers `package.xml` files at any depth, so the per-project
+nesting (`<project>/packages/...`) is found automatically. Because both projects'
+packages live in the same repo but each pulls only its **own** dependencies (via
+its `*.repos`), build the project you set up rather than the whole tree, e.g.:
 
 ```bash
-cd ~/workspaces/bluerov_ws/src/examples
-./build.bash
+# multivehicle:
+colcon build --packages-up-to multivehicle_examples
+# bluerov:
+colcon build --packages-up-to bluerov_tasks
 ```
 
-### Start the container
-
-#### Native Ubuntu with NVIDIA
-
-Install [Rocker](https://github.com/osrf/rocker), then run:
-
-```bash
-cd ~/workspaces/bluerov_ws/src/examples
-./run.bash bluerov_ws:humble
-```
-
-#### WSL 2 with WSLg
-
-```bash
-docker run --rm -it \
-  --gpus all \
-  --device=/dev/dxg \
-  --network=host \
-  --ipc=host \
-  -e DISPLAY="$DISPLAY" \
-  -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
-  -e XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
-  -e PULSE_SERVER="$PULSE_SERVER" \
-  -e NVIDIA_DRIVER_CAPABILITIES=all \
-  -e MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA \
-  -e LD_LIBRARY_PATH=/usr/lib/wsl/lib \
-  -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-  -v /mnt/wslg:/mnt/wslg \
-  -v /usr/lib/wsl:/usr/lib/wsl:ro \
-  -v ~/workspaces/bluerov_ws:/root/HOST/bluerov_ws \
-  bluerov_ws:humble
-```
-
-The WSL command exposes WSLg's X11/Wayland sockets and the `/dev/dxg` virtual
-GPU device, allowing Gazebo to use hardware-accelerated rendering.
-
-### Verify GPU rendering
-
-Inside the container, before launching Gazebo:
-
-```bash
-glxinfo -B | grep -E "OpenGL vendor|OpenGL renderer"
-```
-
-On native Linux, the renderer should identify the NVIDIA GPU. Under WSLg, it
-should mention D3D12 and the GPU. It should not report `llvmpipe`, which is
-software rendering.
-
-### Build the workspace
-
-Inside the container:
-
-```bash
-cd /root/HOST/bluerov_ws
-source /opt/ros/humble/setup.bash
-colcon build --symlink-install \
-  --packages-up-to bluerov_tasks bluerov_sim bb_worlds
-source install/setup.bash
-```
-
-### Demo: Square Mission
-
-The square mission is a control smoke test:
-
-1. Arm and enter `GUIDED`.
-2. Move 2 m forward.
-3. Move 2 m left.
-4. Move 2 m backward.
-5. Move 2 m right.
-
-Inside the container:
-
-```bash
-cd /root/HOST/bluerov_ws
-tmuxp load src/examples/bluerov_mission.yaml
-```
-
-### Demo: Bin Mission
-
-https://github.com/user-attachments/assets/6c262df8-bac6-492a-aef1-9e8cfc30d8a8
-
-```bash
-tmuxp load src/examples/bluerov_bin_mission.yaml
-```
-
-### Demo: Torpedo Mission
-
-https://github.com/user-attachments/assets/9a9c25c5-637a-403a-b34d-4048f9afb5e0
-
-```bash
-tmuxp load src/examples/bluerov_torpedo_mission.yaml
-```
-### Foxglove layouts
-
-Prebuilt Foxglove layouts for the Bin and Torpedo missions are available at
-[BumblebeeAS/controlkitv3](https://github.com/BumblebeeAS/controlkitv3/tree/main/foxglove_layouts).
-Import them into Foxglove Studio for a ready-made view of the relevant topics,
-making it easier to visualize and debug each mission.
-
-## Useful Commands
-
-```bash
-ros2 topic echo /bluerov/odom --once
-ros2 topic echo /mavros/state --once
-ros2 topic echo /mavros/local_position/pose --once
-ros2 topic echo /bluerov/controls/_action/feedback --once
-ros2 service call /mavros/cmd/arming mavros_msgs/srv/CommandBool "{value: true}"
-ros2 service call /mavros/set_mode mavros_msgs/srv/SetMode "{custom_mode: 'GUIDED'}"
-```
-
-## Documentation
-
-- [Architecture and conventions](docs/architecture.md)
+`--packages-up-to` builds the chosen package plus its dependencies and skips the
+other project (whose deps you have not imported). Alternatively, drop a
+`COLCON_IGNORE` file in the project subdir you are not building.

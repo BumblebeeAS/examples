@@ -8,7 +8,7 @@ set -e
 
 IMAGE_NAME="${1:-bluerov_ws:humble}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 rocker \
   --devices /dev/dri \
