@@ -43,10 +43,8 @@ Inside the container:
 
 ```bash
 cd /root/HOST/mvsim_ws
-# Scope the build to this project: --packages-up-to pulls in multivehicle_examples
-# and its deps (multivehicle_sim, multivehicle_interface, px4_msgs, bb_worlds, …)
-# and skips the sibling bluerov_tasks, whose vision deps aren't imported here.
-colcon build --symlink-install --packages-up-to multivehicle_examples
+colcon build --symlink-install --packages-up-to multivehicle_examples microxrcedds_agent bb_robotx_dashboard
+
 source install/setup.bash
 tmuxp load src/examples/multivehicle/tmuxp/mvsim_debug.yaml
 ```
