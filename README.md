@@ -1,30 +1,27 @@
 # examples
 
-Example applications for Bumblebee simulators, organized one subdirectory per
-project. Each subdir is a self-contained sub-workspace (its own `packages/`,
-`build.bash` / `run.bash`, `docker/`, and `*.repos` manifest):
+Example applications for Bumblebee simulators.
 
-| Directory | Simulator base | Contents |
-|-----------|----------------|----------|
-| [`bluerov/`](bluerov/) | `ardusub_sim:humble` | BlueROV2 / ArduSub missions, behaviour trees, perception (`bluerov_tasks`) |
-| [`multivehicle/`](multivehicle/) | `multivehicle_sim:humble` | Multivehicle missions, BlueBoat control, PX4 offboard demo (`multivehicle_examples`) |
+## Sub-examples
 
-Pick the project you want and follow its README.
+- [BlueROV examples](bluerov/README.md)
+- [Multivehicle examples](multivehicle/README.md)
+
+## Demo videos
+
+### BlueROV missions
+
+- Bin mission: https://github.com/user-attachments/assets/6c262df8-bac6-492a-aef1-9e8cfc30d8a8
+- Torpedo mission: https://github.com/user-attachments/assets/9a9c25c5-637a-403a-b34d-4048f9afb5e0
 
 ## Building
 
-`colcon build` discovers `package.xml` files at any depth, so the per-project
-nesting (`<project>/packages/...`) is found automatically. Because both projects'
-packages live in the same repo but each pulls only its **own** dependencies (via
-its `*.repos`), build the project you set up rather than the whole tree, e.g.:
+Build only the project you imported dependencies for:
 
 ```bash
-# multivehicle:
+# multivehicle
 colcon build --packages-up-to multivehicle_examples
-# bluerov:
+
+# bluerov
 colcon build --packages-up-to bluerov_tasks
 ```
-
-`--packages-up-to` builds the chosen package plus its dependencies and skips the
-other project (whose deps you have not imported). Alternatively, drop a
-`COLCON_IGNORE` file in the project subdir you are not building.

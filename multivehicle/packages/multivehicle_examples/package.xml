@@ -1,39 +1,24 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<?xml version="1.0"?>
 <package format="3">
   <name>multivehicle_examples</name>
   <version>0.1.0</version>
-  <description>
-    <p>Example missions, controllers and demos that run on top of the
-    multivehicle_sim simulator: BlueROV2 square-dive mission, BlueBoat control
-    stack (thrust mixer + LOS waypoint controller + demo mission), and the PX4
-    x500 offboard flight demo.</p>
-  </description>
-  <maintainer email="shaolianghe0.0@gmail.com">MonkeScripts</maintainer>
+  <description>Multivehicle demo launches and control scripts.</description>
+  <maintainer email="monkescripts@users.noreply.github.com">monkescripts</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
-  <build_depend>eigen3_cmake_module</build_depend>
-  <build_depend>eigen</build_depend>
 
-  <depend>rclcpp</depend>
-  <depend>rclpy</depend>
-  <depend>geometry_msgs</depend>
-  <depend>std_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>nav_msgs</depend>
-  <depend>tf2</depend>
-  <depend>tf2_ros</depend>
-  <depend>tf2_geometry_msgs</depend>
-  <depend>px4_msgs</depend>
-  <depend>mavros_msgs</depend>
-
-  <exec_depend>multivehicle_sim</exec_depend>
-  <exec_depend>multivehicle_interface</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>bluerov_tasks</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
-  <exec_depend>tf_transformations</exec_depend>
+  <exec_depend>multivehicle_interface</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>uav2_offboard</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

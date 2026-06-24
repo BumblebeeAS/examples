@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-"""Demo mission for the BlueBoat USV: drive a square course.
+"""BlueBoat square mission publisher.
 
-Waits for the first ``/blueboat/odom``, then publishes a square of waypoints
-(in the ``odom`` frame, relative to the boat's start position) to
-``/blueboat/goal_pose``. The LOS waypoint controller follows the line between
-consecutive waypoints; this node just lays down the course and then idles.
-
+Provenance: Adapted from https://github.com/BumblebeeAS/bring-up/tree/main/etc/uav2_sim
 """
 
 import rclpy
@@ -18,7 +14,7 @@ class BlueBoatSquareMission(Node):
     def __init__(self):
         super().__init__("blueboat_square_mission")
 
-        self.declare_parameter("side", 10.0)  # m, square edge length
+        self.declare_parameter("side", 10.0)
         self.declare_parameter("frame_id", "odom")
         self.side = self.get_parameter("side").value
         self.frame_id = self.get_parameter("frame_id").value
@@ -27,11 +23,7 @@ class BlueBoatSquareMission(Node):
         self.create_subscription(Odometry, "/blueboat/odom", self.save_odom, 10)
         self._start = None
         self._published = False
-        # Publish only once the controller is actually subscribed, so the
-        # course isn't dropped before discovery completes (and never twice, or
-        # the controller would queue duplicate waypoints).
         self.create_timer(0.2, self.try_publish)
-        self.get_logger().info("Waiting for /blueboat/odom to lay down course...")
 
     def save_odom(self, msg: Odometry):
         if self._start is None:
@@ -42,26 +34,26 @@ class BlueBoatSquareMission(Node):
             return
         if self.goal_pub.get_subscription_count() == 0:
             return
+
         x0, y0 = self._start
         s = self.side
-        # Axis-aligned square in the odom frame, returning to start.
         waypoints = [
             (x0 + s, y0),
             (x0 + s, y0 + s),
             (x0, y0 + s),
             (x0, y0),
         ]
+
         for wx, wy in waypoints:
-            msg_out = PoseStamped()
-            msg_out.header.frame_id = self.frame_id
-            msg_out.header.stamp = self.get_clock().now().to_msg()
-            msg_out.pose.position.x = wx
-            msg_out.pose.position.y = wy
-            msg_out.pose.orientation.w = 1.0
-            self.goal_pub.publish(msg_out)
-            self.get_logger().info("Queued waypoint (%.2f, %.2f)" % (wx, wy))
+            msg = PoseStamped()
+            msg.header.frame_id = self.frame_id
+            msg.header.stamp = self.get_clock().now().to_msg()
+            msg.pose.position.x = wx
+            msg.pose.position.y = wy
+            msg.pose.orientation.w = 1.0
+            self.goal_pub.publish(msg)
+
         self._published = True
-        self.get_logger().info("Course published (%d waypoints)." % len(waypoints))
 
 
 def main(args=None):
