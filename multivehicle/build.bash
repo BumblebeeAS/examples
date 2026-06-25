@@ -2,10 +2,6 @@
 
 set -e
 
-# Builds the multivehicle_examples Docker image FROM multivehicle_sim:humble.
-# Run from this directory (src/examples/multivehicle): ./build.bash
-#
-# SPDX-License-Identifier: MIT
 image_name=multivehicle_examples
 image_tag=humble
 
@@ -16,8 +12,7 @@ fi
 
 if ! docker image inspect multivehicle_sim:humble >/dev/null 2>&1; then
     echo "Err: base image multivehicle_sim:humble not found."
-    echo "Build it first from the multivehicle_sim repo:"
-    echo "  cd ../../multivehicle_sim && ./build.bash"
+    echo "Build it first from src/multivehicle_sim."
     exit 1
 fi
 

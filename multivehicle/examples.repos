@@ -5,7 +5,6 @@ repositories:
     type: git
     url: https://github.com/BumblebeeAS/multivehicle_sim.git
 
-  # --- everything multivehicle_sim's dependencies.repos pulls ---
   ardupilot_gazebo:
     type: git
     url: https://github.com/ArduPilot/ardupilot_gazebo.git
@@ -29,10 +28,6 @@ repositories:
     type: git
     url: https://github.com/BumblebeeAS/bb_msgs.git
     version: multivehicle_sim
-
-  # --- examples-only: PX4 uORB message types for the offboard demo ---
-  px4_msgs:
+  uav2_offboard:
     type: git
-    url: https://github.com/PX4/px4_msgs.git
-    version: release/1.16
-    depth: 1
+    url: https://github.com/BumblebeeAS/uav2_offboard.git

@@ -6,9 +6,7 @@ ARG HOME_DIR=/root
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-navigation2 \
-    ros-humble-nav2-bringup \
-    ros-humble-nav2-util \
-    ros-humble-nav2-common && \
+    ros-humble-nav2-bringup && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
