@@ -1,27 +1,38 @@
+import os
+
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    package = LaunchConfiguration("offboard_package")
-    executable = LaunchConfiguration("offboard_executable")
+    params_file = LaunchConfiguration("params_file")
+
+    offboard_launch = os.path.join(
+        get_package_share_directory("uav2_offboard"), "launch", "launch.py"
+    )
+    default_params = os.path.join(
+        get_package_share_directory("multivehicle_examples"),
+        "config",
+        "uav2_offboard_x500.yaml",
+    )
 
     return LaunchDescription(
         [
-            DeclareLaunchArgument("offboard_package", default_value="uav2_offboard"),
-            DeclareLaunchArgument("offboard_executable", default_value="px4_offboard_demo"),
+            DeclareLaunchArgument("params_file", default_value=default_params),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(offboard_launch),
+                launch_arguments={"params_file": params_file}.items(),
+            ),
             Node(
-                package=package,
-                executable=executable,
-                name="px4_offboard_demo",
+                package="mission_planner_2",
+                executable="uav2_offboard_demo_main.py",
+                name="uav2_offboard_demo",
                 output="screen",
-                parameters=[
-                    {"use_sim_time": True},
-                    {"vehicle_namespace": "x500"},
-                    {"vehicle_id": 2},
-                ],
+                parameters=[{"use_sim_time": True}],
             ),
         ]
     )

@@ -1,7 +1,5 @@
-# tmuxp DEBUG session for the multivehicle examples (run INSIDE the
-# multivehicle_examples container). Brings up the full stack — the simulator
-# (multivehicle_sim) AND the example apps (missions, BlueBoat control, the PX4
-# offboard flight demo) — plus the dashboard. Load with:
+# tmuxp DEBUG session for the multivehicle examples
+# Load with:
 #
 #   tmuxp load /root/HOST/mvsim_ws/src/examples/multivehicle/tmuxp/mvsim_debug.yaml
 #
@@ -9,16 +7,11 @@
 # dependency order and watch each one. Recommended order:
 #
 #   1) world      — bring up Gazebo + the course first       (multivehicle_sim)
-#   2) bluerov    — BlueROV2 + ArduSub/MAVROS, then its square-dive mission
+#   2) bluerov    — BlueROV2 + ArduSub/MAVROS, then its square mission BT
 #   3) boat       — BlueBoat spawn + control stack + square mission
-#   4) drone      — XRCE agent + PX4 SITL x500 + gz bridge + offboard demo
+#   4) drone      — XRCE agent + PX4 SITL x500 + gz bridge + offboard demo BT
 #   5) dashboard  — web backend (:8080) + sim-side LED/incident bridges
 #   6) debug      — free shell + Foxglove bridge
-#
-# Workspace dir defaults to /root/HOST/mvsim_ws. Override with WS_DIR:
-#   WS_DIR=/root/HOST/my_ws tmuxp load .../mvsim_debug.yaml
-#
-# NVIDIA hosts: uncomment the two PRIME-offload exports in shell_command_before.
 
 session_name: mvsim
 
@@ -28,8 +21,9 @@ global_options:
 
 shell_command_before:
   - 'WS_DIR="${WS_DIR:-/root/HOST/mvsim_ws}"'
-  # - export __NV_PRIME_RENDER_OFFLOAD=1
-  # - export __GLX_VENDOR_LIBRARY_NAME=nvidia
+  # NVIDIA PRIME render offload — auto-enabled when an NVIDIA GPU is passed through
+  # (rocker --nvidia mounts /dev/nvidia0). Harmless / skipped on non-NVIDIA hosts.
+  - '[ -e /dev/nvidia0 ] && export __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia || true'
   - source /opt/ros/humble/setup.bash
   - '[ -f "$WS_DIR/install/setup.bash" ] && source "$WS_DIR/install/setup.bash"'
   - cd "$WS_DIR"
@@ -43,8 +37,7 @@ windows:
           - cmd: ros2 launch multivehicle_sim world.launch.py world_name:=robotx_2026_sg_river
             enter: false
 
-  # 2. BlueROV2 — spawn + ArduSub + MAVROS (sim, top); square-dive mission
-  #    (examples, bottom).
+  # 2. BlueROV2
   - window_name: bluerov
     layout: even-vertical
     panes:
@@ -52,11 +45,10 @@ windows:
           - cmd: ros2 launch multivehicle_sim bluerov.launch.py
             enter: false
       - shell_command:
-          - cmd: ros2 launch multivehicle_examples bluerov_mission.launch.py
+          - cmd: ros2 launch bluerov_tasks bluerov_square_bt.launch.py
             enter: false
 
-  # 3. BlueBoat — spawn (sim, top); control stack + square mission (examples,
-  #    bottom; use_mission:=true runs the demo course through the LOS controller).
+  # 3. BlueBoat
   - window_name: boat
     layout: even-vertical
     panes:
@@ -67,8 +59,7 @@ windows:
           - cmd: ros2 launch multivehicle_examples boat_control.launch.py use_mission:=true
             enter: false
 
-  # 4. PX4 x500 drone — agent + PX4 SITL + gz bridge (sim), then the offboard
-  #    flight demo (examples). Start top-to-bottom; offboard needs agent + PX4.
+  # 4. PX4 x500 drone
   - window_name: drone
     layout: even-vertical
     panes:
@@ -85,9 +76,7 @@ windows:
           - cmd: ros2 launch multivehicle_examples px4_offboard.launch.py
             enter: false
 
-  # 5. Dashboard — fake vehicle (RoboCommand :9000), web backend (:8080), and the
-  #    sim-side LED/incident bridges (bridges_pkg=multivehicle_sim, models from
-  #    bb_worlds) tracking all three vehicles' /…/odom.
+  # 5. Dashboard
   - window_name: dashboard
     layout: even-vertical
     panes:
@@ -101,7 +90,7 @@ windows:
           - cmd: ros2 launch bb_robotx_dashboard robotx_2026_sim.launch.py bridges_pkg:=multivehicle_sim models_pkg:=bb_worlds auv_name:=bluerov auv_pose_topic:=/bluerov/odom asv_name:=blueboat asv_pose_topic:=/blueboat/odom uav_name:=x500 uav_pose_topic:=/x500/odom
             enter: false
 
-  # 6. Debug — free shell + Foxglove bridge (ws://localhost:8765).
+  # 6. Debug
   - window_name: debug
     layout: even-vertical
     panes:

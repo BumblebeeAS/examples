@@ -5,9 +5,12 @@ Missions and control demos built on
 
 ## Launch files
 
-- `bluerov_mission.launch.py`: `multivehicle_sim` + `ground_truth_to_mavros` + `bluerov_tasks/bluerov_movement.py`
+- BlueROV square mission: run `bluerov_tasks`'s tree launch directly
+  `ros2 launch bluerov_tasks bluerov_square_bt.launch.py` 
 - `boat_control.launch.py`: BlueBoat thrust mixer + LOS controller (+ optional mission node)
-- `px4_offboard.launch.py`: PX4 offboard demo from `uav2_offboard`
+- `px4_offboard.launch.py`: the `uav2_offboard` `offboard_node` action backend + the
+  `mission_planner_2` UAV2 offboard demo behaviour tree (`uav2_offboard_demo_main.py`)
+  driving it (takeoff → standoff → return → land). 
 
 ## Setup
 
@@ -31,10 +34,3 @@ colcon build --symlink-install --packages-up-to multivehicle_examples microxrced
 source install/setup.bash
 tmuxp load src/examples/multivehicle/tmuxp/mvsim_debug.yaml
 ```
-
-## Provenance
-
-- `packages/multivehicle_examples/scripts/blueboat_mission.py` adapted from `bring-up/etc/uav2_sim`
-- `packages/multivehicle_examples/scripts/blueboat_thrust_mixer.py` adapted from `bring-up/etc/uav2_sim`
-- `packages/multivehicle_examples/scripts/blueboat_waypoint_controller.py` adapted from `bring-up/etc/uav2_sim`
-- PX4 offboard demo is provided by `https://github.com/BumblebeeAS/uav2_offboard`

@@ -31,3 +31,11 @@ repositories:
   uav2_offboard:
     type: git
     url: https://github.com/BumblebeeAS/uav2_offboard.git
+  mission_planner_release:
+    type: git
+    url: https://github.com/BumblebeeAS/mission_planner_release.git
+    version: main
+  frames:
+    type: git
+    url: https://github.com/BumblebeeAS/frames.git
+    version: humble

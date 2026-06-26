@@ -11,9 +11,11 @@
 
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>bluerov_tasks</exec_depend>
+  <exec_depend>frames</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>mission_planner_2</exec_depend>
   <exec_depend>multivehicle_interface</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>rclpy</exec_depend>
