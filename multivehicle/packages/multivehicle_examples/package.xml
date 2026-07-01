@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>multivehicle_examples</name>
+  <version>0.1.0</version>
+  <description>Multivehicle demo launches and control scripts.</description>
+  <maintainer email="monkescripts@users.noreply.github.com">monkescripts</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>bluerov_tasks</exec_depend>
+  <exec_depend>frames</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>mission_planner_2</exec_depend>
+  <exec_depend>multivehicle_interface</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>uav2_offboard</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

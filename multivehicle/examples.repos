@@ -1,0 +1,41 @@
+# examples.repos
+
+repositories:
+  multivehicle_sim:
+    type: git
+    url: https://github.com/BumblebeeAS/multivehicle_sim.git
+
+  ardupilot_gazebo:
+    type: git
+    url: https://github.com/ArduPilot/ardupilot_gazebo.git
+  Micro-XRCE-DDS-Agent:
+    type: git
+    url: https://github.com/eProsima/Micro-XRCE-DDS-Agent.git
+    version: v2.4.2
+    depth: 1
+  gz_led_plugin:
+    type: git
+    url: https://github.com/BumblebeeAS/bb_led_plugin.git
+    version: main
+  bb_robotx_dashboard:
+    type: git
+    url: https://github.com/BumblebeeAS/bb_robotx_dashboard.git
+  bb_worlds:
+    type: git
+    url: https://github.com/BumblebeeAS/bb_worlds.git
+    version: main
+  bb_msgs:
+    type: git
+    url: https://github.com/BumblebeeAS/bb_msgs.git
+    version: multivehicle_sim
+  uav2_offboard:
+    type: git
+    url: https://github.com/BumblebeeAS/uav2_offboard.git
+  mission_planner_release:
+    type: git
+    url: https://github.com/BumblebeeAS/mission_planner_release.git
+    version: main
+  frames:
+    type: git
+    url: https://github.com/BumblebeeAS/frames.git
+    version: humble
