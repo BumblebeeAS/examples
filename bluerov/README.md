@@ -1,8 +1,6 @@
-# Examples
+# BlueROV with ArduSub
 
-## BlueROV with ArduSub
-
-### Quickstart
+## Quickstart
 
 We assume the ROS workspace is `~/workspaces/bluerov_ws`. Change the paths accordingly if needed.
 
@@ -30,9 +28,9 @@ cd ~/workspaces/bluerov_ws/src/examples
 ./build.bash
 ```
 
-### Start the container
+## Start the container
 
-#### Native Ubuntu with NVIDIA
+### Native Ubuntu with NVIDIA
 
 Install [Rocker](https://github.com/osrf/rocker), then run:
 
@@ -41,7 +39,7 @@ cd ~/workspaces/bluerov_ws/src/examples
 ./run.bash bluerov_ws:humble
 ```
 
-#### WSL 2 with WSLg
+### WSL 2 with WSLg
 
 ```bash
 docker run --rm -it \
@@ -66,7 +64,7 @@ docker run --rm -it \
 The WSL command exposes WSLg's X11/Wayland sockets and the `/dev/dxg` virtual
 GPU device, allowing Gazebo to use hardware-accelerated rendering.
 
-### Verify GPU rendering
+## Verify GPU rendering
 
 Inside the container, before launching Gazebo:
 
@@ -78,7 +76,7 @@ On native Linux, the renderer should identify the NVIDIA GPU. Under WSLg, it
 should mention D3D12 and the GPU. It should not report `llvmpipe`, which is
 software rendering.
 
-### Build the workspace
+## Build the workspace
 
 Inside the container:
 
@@ -90,7 +88,7 @@ colcon build --symlink-install \
 source install/setup.bash
 ```
 
-### Demo: Square Mission
+## Demo: Square Mission
 
 The square mission is a control smoke test:
 
@@ -107,7 +105,7 @@ cd /root/HOST/bluerov_ws
 tmuxp load src/examples/bluerov_mission.yaml
 ```
 
-### Demo: Bin Mission
+## Demo: Bin Mission
 
 https://github.com/user-attachments/assets/6c262df8-bac6-492a-aef1-9e8cfc30d8a8
 
@@ -115,19 +113,16 @@ https://github.com/user-attachments/assets/6c262df8-bac6-492a-aef1-9e8cfc30d8a8
 tmuxp load src/examples/bluerov_bin_mission.yaml
 ```
 
-### Demo: Torpedo Mission
+## Demo: Torpedo Mission
 
 https://github.com/user-attachments/assets/9a9c25c5-637a-403a-b34d-4048f9afb5e0
 
 ```bash
 tmuxp load src/examples/bluerov_torpedo_mission.yaml
 ```
-### Foxglove layouts
+## Foxglove Layouts
 
-Prebuilt Foxglove layouts for the Bin and Torpedo missions are available at
-[BumblebeeAS/controlkitv3](https://github.com/BumblebeeAS/controlkitv3/tree/main/foxglove_layouts).
-Import them into Foxglove Studio for a ready-made view of the relevant topics,
-making it easier to visualize and debug each mission.
+Import our [Foxglove layouts](https://github.com/BumblebeeAS/controlkitv3/tree/main/foxglove_layouts) for a ready-made view of the relevant topics and services, making it easier to visualize and debug each mission.
 
 ## Useful Commands
 

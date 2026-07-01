@@ -1,4 +1,4 @@
-# multivehicle examples
+# Multi-vehicle examples
 
 Missions and control demos built on
 [`multivehicle_sim`](https://github.com/BumblebeeAS/multivehicle_sim).
